@@ -172,7 +172,7 @@ const CandidateInfo: React.FC<CandidateInfoProps> = ({ conversationId }) => {
                 name="pipeline"
                 value={option.value}
                 checked={pipelineStatus === option.value}
-                onChange={(e) => setPipelineStatus(e.target.value)}
+                onChange={(e) => setPipelineStatus(e.target.value as typeof pipelineStatus)}
                 className="w-4 h-4 text-[#2D9596] focus:ring-[#2D9596]"
               />
               <span className="text-sm text-[#265073]">{option.label}</span>

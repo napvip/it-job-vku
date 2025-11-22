@@ -179,7 +179,7 @@ export function CandidateHeader() {
               <button
                 onClick={() => router.push("/candidate/dashboard")}
                 className={`px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center gap-2 ${
-                  currentPage === "candidate-dashboard"
+                  currentPage === "dashboard"
                     ? "bg-[#2D9596] text-white shadow-md"
                     : "text-white hover:bg-white/10 hover:text-[#9AD0C2]"
                 }`}
@@ -204,7 +204,7 @@ export function CandidateHeader() {
               {/* Gợi ý AI */}
               <button
                 className={`px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center gap-2 relative ${
-                  currentPage === "candidate-recommendations"
+                  currentPage === "recommendations"
                     ? "bg-[#2D9596] text-white shadow-md"
                     : "text-white hover:bg-white/10 hover:text-[#9AD0C2]"
                 }`}
@@ -291,7 +291,6 @@ export function CandidateHeader() {
                               whileHover={{ backgroundColor: "#ECF4D6" }}
                               onClick={() => {
                                 setIsNotificationOpen(false);
-                                onNavigateToNotificationDetail?.(notif.id);
                               }}
                               className={`px-5 py-4 border-b border-[#9AD0C2]/30 cursor-pointer transition-colors ${
                                 notif.unread ? "bg-[#ECF4D6]/30" : "bg-white"
@@ -424,7 +423,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsMessagesOpen(false);
-                            onNavigateToMessages?.();
+                            router.push("/candidate/messages");
                           }}
                           className="text-[#2D9596] text-sm hover:text-[#265073] transition-colors"
                         >
@@ -440,7 +439,7 @@ export function CandidateHeader() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => onNavigateToPage?.("ai-matching")}
+                onClick={() => router.push("/ai-matching")}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2D9596] hover:bg-[#37A8A7] transition-all duration-300 text-white shadow-md"
               >
                 <Cpu className="w-4 h-4" />
@@ -524,7 +523,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToProfile?.();
+                            router.push("/candidate/profile");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -535,7 +534,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToApplications?.();
+                            router.push("/candidate/applications");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -546,7 +545,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToInterviews?.();
+                            router.push("/candidate/interviews");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -557,7 +556,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToMessages?.();
+                            router.push("/candidate/messages");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -575,7 +574,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToSavedJobs?.();
+                            router.push("/candidate/saved-jobs");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -586,7 +585,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToFollowingCompanies?.();
+                            router.push("/candidate/following-companies");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -597,7 +596,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToSettings?.();
+                            router.push("/candidate/settings");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -608,7 +607,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToCareerPath?.();
+                            router.push("/candidate/career-path");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -621,12 +620,12 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToHome?.();
+                            router.push("/");
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition-all duration-300 text-red-500 group"
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition-all duration-300 text-red-600 group border-t border-gray-100 mt-2 pt-4"
                         >
                           <LogOut className="w-5 h-5" />
-                          <span className="text-sm">Đăng xuất</span>
+                          <span className="text-sm font-medium">Đăng xuất</span>
                         </button>
                       </div>
                     </motion.div>
@@ -641,9 +640,9 @@ export function CandidateHeader() {
         <div className="lg:hidden border-t border-white/10 px-4 py-2 bg-[#265073]">
           <div className="flex items-center justify-around">
             <button
-              onClick={onNavigateToDashboard}
+              onClick={() => router.push("/candidate/dashboard")}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
-                currentPage === "candidate-dashboard"
+                currentPage === "dashboard"
                   ? "text-[#9AD0C2]"
                   : "text-white/70"
               }`}
@@ -653,7 +652,7 @@ export function CandidateHeader() {
             </button>
 
             <button
-              onClick={onNavigateToJobs}
+              onClick={() => router.push("/jobs")}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
                 currentPage === "jobs" ? "text-[#9AD0C2]" : "text-white/70"
               }`}
@@ -664,18 +663,18 @@ export function CandidateHeader() {
 
             <button
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 relative ${
-                currentPage === "candidate-recommendations"
+                currentPage === "recommendations"
                   ? "text-[#9AD0C2]"
                   : "text-white/70"
               }`}
-              onClick={onNavigateToRecommendations}
+              onClick={() => router.push("/candidate/ai-recommendations")}
             >
               <Sparkles className="w-5 h-5" />
               <span className="text-[10px]">AI</span>
             </button>
 
             <button
-              onClick={onNavigateToCompanies}
+              onClick={() => router.push("/companies")}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
                 currentPage === "companies" ? "text-[#9AD0C2]" : "text-white/70"
               }`}
@@ -687,7 +686,7 @@ export function CandidateHeader() {
             <button
               onClick={() => router.push("/candidate/profile")}
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 ${
-                currentPage === "candidate-profile"
+                currentPage === "profile"
                   ? "text-[#9AD0C2]"
                   : "text-white/70"
               }`}
@@ -701,6 +700,11 @@ export function CandidateHeader() {
     </>
   );
 }
+
+
+
+
+
 
 
 

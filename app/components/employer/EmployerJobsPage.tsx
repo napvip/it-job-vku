@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -21,19 +22,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-interface EmployerJobsPageProps {
-  onNavigateToJobDetail?: (jobId: number) => void;
-  onNavigateToApplicants?: (jobId: number) => void;
-  onNavigateToCreateJob?: () => void;
-  onNavigateToEditJob?: (jobId: number) => void;
-}
-
-export function EmployerJobsPage({
-  onNavigateToJobDetail,
-  onNavigateToApplicants,
-  onNavigateToCreateJob,
-  onNavigateToEditJob,
-}: EmployerJobsPageProps) {
+export function EmployerJobsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
@@ -208,7 +198,7 @@ export function EmployerJobsPage({
               </p>
             </div>
             <button
-              onClick={onNavigateToCreateJob}
+              onClick={() => router.push("/employer/jobs/create")}
               className="px-6 py-3 bg-[#2D9596] text-white rounded-xl hover:bg-[#265073] transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl"
             >
               <Plus className="w-5 h-5" />
@@ -350,7 +340,7 @@ export function EmployerJobsPage({
                   dụng đầu tiên
                 </p>
                 <button
-                  onClick={onNavigateToCreateJob}
+                  onClick={() => router.push("/employer/jobs/create")}
                   className="px-8 py-3 bg-[#2D9596] text-white rounded-xl hover:bg-[#265073] transition-colors"
                 >
                   Đăng tin tuyển dụng đầu tiên ngay
@@ -372,7 +362,7 @@ export function EmployerJobsPage({
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <h3
-                              onClick={() => onNavigateToJobDetail?.(job.id)}
+                              onClick={() => router.push(`/employer/jobs/${job.id}`)}
                               className="text-[#265073] text-xl mb-2 hover:text-[#2D9596] transition-colors cursor-pointer"
                             >
                               {job.title}
@@ -467,21 +457,21 @@ export function EmployerJobsPage({
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-3 pt-4 border-t-2 border-[#9AD0C2]">
                       <button
-                        onClick={() => onNavigateToJobDetail?.(job.id)}
+                        onClick={() => router.push(`/employer/jobs/${job.id}`)}
                         className="flex-1 min-w-[140px] px-4 py-2 bg-gradient-to-r from-[#2D9596] to-[#265073] text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                       >
                         <Eye className="w-4 h-4" />
                         Xem chi tiết
                       </button>
                       <button
-                        onClick={() => onNavigateToApplicants?.(job.id)}
+                        onClick={() => router.push(`/employer/applicants/${job.id}`)}
                         className="flex-1 min-w-[140px] px-4 py-2 bg-[#265073] text-white rounded-lg hover:bg-[#2D9596] transition-colors flex items-center justify-center gap-2"
                       >
                         <Users className="w-4 h-4" />
                         Xem ứng viên
                       </button>
                       <button
-                        onClick={() => onNavigateToEditJob?.(job.id)}
+                        onClick={() => router.push(`/employer/jobs/edit/${job.id}`)}
                         className="px-4 py-2 border-2 border-[#2D9596] text-[#2D9596] rounded-lg hover:bg-[#2D9596] hover:text-white transition-colors flex items-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
@@ -631,4 +621,5 @@ export function EmployerJobsPage({
     </div>
   );
 }
+
 

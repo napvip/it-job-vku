@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Edit,
@@ -28,17 +29,12 @@ import {
 
 interface EmployerApplicantsPageProps {
   jobId: number | null;
-  onNavigateToJobDetail?: (jobId: number) => void;
-  onNavigateToEditJob?: (jobId: number) => void;
-  onNavigateToApplicantDetail?: (applicantId: number) => void;
 }
 
 export function EmployerApplicantsPage({
   jobId,
-  onNavigateToJobDetail,
-  onNavigateToEditJob,
-  onNavigateToApplicantDetail,
 }: EmployerApplicantsPageProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [experienceFilter, setExperienceFilter] = useState("all");
@@ -207,14 +203,14 @@ export function EmployerApplicantsPage({
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => onNavigateToEditJob?.(job.id)}
+                  onClick={() => router.push(`/employer/jobs/edit/${job.id}`)}
                   className="px-6 py-2 border-2 border-[#2D9596] text-[#2D9596] rounded-lg hover:bg-[#2D9596] hover:text-white transition-colors flex items-center gap-2"
                 >
                   <Edit className="w-4 h-4" />
                   Chỉnh sửa tin tuyển dụng
                 </button>
                 <button
-                  onClick={() => onNavigateToJobDetail?.(job.id)}
+                  onClick={() => router.push(`/employer/jobs/${job.id}`)}
                   className="px-6 py-2 text-[#2D9596] hover:text-[#265073] transition-colors flex items-center gap-2"
                 >
                   <Eye className="w-4 h-4" />
@@ -440,7 +436,7 @@ export function EmployerApplicantsPage({
                           <div className="flex-1">
                             <h3
                               onClick={() =>
-                                onNavigateToApplicantDetail?.(applicant.id)
+                                router.push(`/employer/applicant/${applicant.id}`)
                               }
                               className="text-[#265073] text-xl mb-1 hover:text-[#2D9596] transition-colors cursor-pointer"
                             >

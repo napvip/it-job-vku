@@ -7,7 +7,7 @@ export default function Pipeline() {
   return (
     <>
       <EmployerHeader />
-      <PipelineComponent />
+      <PipelineComponent jobId={null} />
     </>
   );
 }

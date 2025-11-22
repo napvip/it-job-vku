@@ -132,7 +132,7 @@ function CandidateCard({
 
   return (
     <motion.div
-      ref={drag}
+      ref={drag as any}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       whileHover={{ scale: 1.02, boxShadow: "0 8px 16px rgba(45, 149, 150, 0.2)" }}
@@ -253,7 +253,7 @@ function PipelineColumn({
 
   return (
     <div
-      ref={drop}
+      ref={drop as any}
       className={`flex-shrink-0 w-80 bg-white rounded-2xl p-4 border-2 transition-all ${
         isOver ? "border-[#2D9596] shadow-lg" : "border-[#9AD0C2]"
       }`}

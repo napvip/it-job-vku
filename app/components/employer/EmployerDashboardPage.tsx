@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Briefcase,
@@ -23,21 +24,8 @@ import {
   Target,
 } from "lucide-react";
 
-interface EmployerDashboardPageProps {
-  onNavigateToJobs?: () => void;
-  onNavigateToApplicants?: (jobId: number) => void;
-  onNavigateToMessages?: () => void;
-  onNavigateToInterviews?: () => void;
-  onNavigateToJDAnalyzer?: () => void;
-}
-
-export function EmployerDashboardPage({
-  onNavigateToJobs,
-  onNavigateToApplicants,
-  onNavigateToMessages,
-  onNavigateToInterviews,
-  onNavigateToJDAnalyzer,
-}: EmployerDashboardPageProps) {
+export function EmployerDashboardPage() {
+  const router = useRouter();
   const [timeRange, setTimeRange] = useState<"week" | "month" | "quarter">(
     "month"
   );
@@ -485,7 +473,7 @@ export function EmployerDashboardPage({
                 Tin tuyển dụng đang hoạt động
               </h2>
               <button
-                onClick={onNavigateToJobs}
+                onClick={() => router.push("/employer/jobs")}
                 className="text-[#2D9596] hover:text-[#265073] transition-colors flex items-center gap-1 text-sm"
               >
                 Xem tất cả
@@ -532,7 +520,7 @@ export function EmployerDashboardPage({
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => onNavigateToApplicants!(job.id)}
+                      onClick={() => router.push(`/employer/applicants/${job.id}`)}
                       className="flex-1 px-4 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors text-sm"
                     >
                       Xem ứng viên
@@ -622,7 +610,7 @@ export function EmployerDashboardPage({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[#265073] text-lg">Ứng viên mới nhất</h2>
               <button
-                onClick={onNavigateToApplicants}
+                onClick={() => router.push("/employer/applicants")}
                 className="text-[#2D9596] hover:text-[#265073] transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -695,7 +683,7 @@ export function EmployerDashboardPage({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[#265073] text-lg">Tin nhắn mới</h2>
               <button
-                onClick={onNavigateToMessages}
+                onClick={() => router.push("/employer/messages")}
                 className="text-[#2D9596] hover:text-[#265073] transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -707,7 +695,7 @@ export function EmployerDashboardPage({
                 <div
                   key={msg.id}
                   className="p-4 bg-[#ECF4D6] rounded-xl hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={onNavigateToMessages}
+                  onClick={() => router.push("/employer/messages")}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="text-[#265073]">{msg.candidate}</h3>
@@ -730,7 +718,7 @@ export function EmployerDashboardPage({
             </div>
 
             <button
-              onClick={onNavigateToMessages}
+              onClick={() => router.push("/employer/messages")}
               className="w-full px-4 py-3 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors flex items-center justify-center gap-2"
             >
               <MessageCircle className="w-4 h-4" />
@@ -748,7 +736,7 @@ export function EmployerDashboardPage({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-[#265073] text-lg">Lịch phỏng vấn</h2>
               <button
-                onClick={onNavigateToInterviews}
+                onClick={() => router.push("/employer/interviews")}
                 className="text-[#2D9596] hover:text-[#265073] transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -797,7 +785,7 @@ export function EmployerDashboardPage({
             </div>
 
             <button
-              onClick={onNavigateToInterviews}
+              onClick={() => router.push("/employer/interviews")}
               className="w-full mt-4 px-4 py-2 border-2 border-[#9AD0C2] text-[#265073] rounded-lg hover:bg-[#9AD0C2] transition-colors text-sm"
             >
               Xem tất cả lịch
@@ -820,7 +808,7 @@ export function EmployerDashboardPage({
           <div className="grid md:grid-cols-3 gap-6">
             {/* JD Analyzer */}
             <div
-              onClick={onNavigateToJDAnalyzer}
+              onClick={() => router.push("/employer/jd-analyzer")}
               className="bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-2xl p-6 text-white cursor-pointer hover:shadow-2xl transition-shadow group"
             >
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">

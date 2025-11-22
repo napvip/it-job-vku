@@ -262,7 +262,7 @@ export function CompanyReviewsSection() {
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="text-[#265073]">{review.author}</h4>
                     {review.verified && (
-                      <CheckCircle className="w-4 h-4 text-[#2D9596]" title="Đã xác thực" />
+                      <CheckCircle className="w-4 h-4 text-[#2D9596]" />
                     )}
                   </div>
                   <p className="text-sm text-[#265073]/70">{review.position}</p>

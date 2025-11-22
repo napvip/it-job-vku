@@ -330,7 +330,7 @@ export function EmployerHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToDashboard?.();
+                            router.push("/employer/dashboard");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -341,7 +341,7 @@ export function EmployerHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToSettings?.();
+                            router.push("/employer/settings");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
                         >
@@ -354,7 +354,7 @@ export function EmployerHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            onNavigateToHome?.();
+                            router.push("/");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#FEE] transition-all duration-300 text-[#C9302C] group"
                         >
