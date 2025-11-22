@@ -1,18 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Briefcase } from "lucide-react";
 import { motion } from "framer-motion";
 import { LoginForm } from "./LoginForm";
 import { LoginIllustration } from "./LoginIllustration";
 
-interface LoginPageProps {
-  onNavigateToHome?: () => void;
-  onNavigateToRegister?: () => void;
-  onNavigateToDashboard?: () => void;
-  onNavigateToEmployerDashboard?: () => void;
-}
-
-export function LoginPage({ onNavigateToHome, onNavigateToRegister, onNavigateToDashboard, onNavigateToEmployerDashboard }: LoginPageProps) {
+export function LoginPage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-[#ECF4D6] flex flex-col">
       {/* Header */}
@@ -20,7 +15,7 @@ export function LoginPage({ onNavigateToHome, onNavigateToRegister, onNavigateTo
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <button
-            onClick={onNavigateToHome}
+            onClick={() => router.push("/")}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <div className="w-10 h-10 bg-[#2D9596] rounded-lg flex items-center justify-center">
@@ -33,7 +28,7 @@ export function LoginPage({ onNavigateToHome, onNavigateToRegister, onNavigateTo
           <div className="text-[#265073]">
             Chưa có tài khoản?{" "}
             <button
-              onClick={onNavigateToRegister}
+              onClick={() => router.push("/register")}
               className="text-[#2D9596] hover:text-[#265073] transition-colors"
             >
               Đăng ký ngay
@@ -48,15 +43,11 @@ export function LoginPage({ onNavigateToHome, onNavigateToRegister, onNavigateTo
           <div className="flex flex-col lg:flex-row items-stretch min-h-[600px] bg-white rounded-[32px] shadow-[0_20px_60px_rgba(154,208,194,0.25)] overflow-hidden">
             {/* Left Side - Form */}
             <div className="flex-1 flex items-center justify-center p-8 md:p-12 lg:p-16">
-              <LoginForm 
-                onNavigateToRegister={onNavigateToRegister} 
-                onNavigateToDashboard={onNavigateToDashboard}
-                onNavigateToEmployerDashboard={onNavigateToEmployerDashboard}
-              />
+              <LoginForm />
             </div>
 
             {/* Right Side - Illustration (Desktop only) */}
-            <LoginIllustration onNavigateToRegister={onNavigateToRegister} />
+            <LoginIllustration />
           </div>
         </div>
       </main>

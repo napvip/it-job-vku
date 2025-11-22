@@ -1,16 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
-interface LoginFormProps {
-  onNavigateToRegister?: () => void;
-  onNavigateToDashboard?: () => void;
-  onNavigateToEmployerDashboard?: () => void;
-}
-
-export function LoginForm({ onNavigateToRegister, onNavigateToDashboard, onNavigateToEmployerDashboard }: LoginFormProps) {
+export function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,14 +31,10 @@ export function LoginForm({ onNavigateToRegister, onNavigateToDashboard, onNavig
         
         // Check if employer email
         if (email === "nhatuyendung@gmail.com" || email.includes("nhatuyendung") || email === "ntd@gmail.com") {
-          if (onNavigateToEmployerDashboard) {
-            onNavigateToEmployerDashboard();
-          }
+          router.push("/employer/dashboard");
         } else {
           // Regular candidate
-          if (onNavigateToDashboard) {
-            onNavigateToDashboard();
-          }
+          router.push("/candidate/dashboard");
         }
       }
     }, 1500);
@@ -226,7 +218,7 @@ export function LoginForm({ onNavigateToRegister, onNavigateToDashboard, onNavig
             Chưa có tài khoản?{" "}
             <button
               type="button"
-              onClick={onNavigateToRegister}
+              onClick={() => router.push("/register")}
               className="text-[#2D9596] hover:text-[#265073] transition-colors"
             >
               Đăng ký ngay

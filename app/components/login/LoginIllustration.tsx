@@ -1,14 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Sparkles, TrendingUp, Users, Target } from "lucide-react";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 
-interface LoginIllustrationProps {
-  onNavigateToRegister?: () => void;
-}
-
-export function LoginIllustration({ onNavigateToRegister }: LoginIllustrationProps) {
+export function LoginIllustration() {
+  const router = useRouter();
   const features = [
     { icon: Sparkles, text: "AI Matching thông minh" },
     { icon: TrendingUp, text: "10,000+ việc làm IT" },
@@ -164,7 +162,7 @@ export function LoginIllustration({ onNavigateToRegister }: LoginIllustrationPro
               Đăng ký để trải nghiệm <span className="text-[#9AD0C2]">AI Matching</span>
             </p>
             <button
-              onClick={onNavigateToRegister}
+              onClick={() => router.push("/register")}
               className="px-8 py-3 bg-[#9AD0C2] text-[#265073] rounded-full hover:bg-white transition-all shadow-lg hover:shadow-xl"
             >
               Đăng ký ngay
