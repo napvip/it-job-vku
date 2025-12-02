@@ -40,27 +40,86 @@ export async function generateInterviewQuestions(
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
-Bạn là một chuyên gia tuyển dụng IT chuyên nghiệp. Hãy tạo ${questionCount} câu hỏi phỏng vấn cho vị trí ${position} ở cấp độ ${level}.
+Bạn là Senior Technical Recruiter với 15+ năm kinh nghiệm phỏng vấn cho Google, Meta, Amazon.
+Nhiệm vụ: Tạo ${questionCount} câu hỏi phỏng vấn CHUYÊN NGHIỆP, CHUYÊN SÂU cho vị trí ${position} level ${level}.
 
-Yêu cầu:
-- Câu hỏi phải phù hợp với level ${level} (Intern/Fresher: cơ bản, Junior: trung bình, Middle/Senior: nâng cao)
-- Bao gồm các loại câu hỏi: Giới thiệu, Kỹ thuật, Kinh nghiệm, Tình huống, Soft skills
-- Câu hỏi bằng ${language === "vi" ? "tiếng Việt" : "tiếng Anh"}
-- Câu hỏi rõ ràng, dễ hiểu, thực tế, phù hợp cho phỏng vấn online
+🎯 TIÊU CHÍ CÂU HỎI:
 
-Trả về JSON array với format:
+1️⃣ THEO LEVEL:
+${level === "intern" || level === "fresher" ? 
+`- Intern/Fresher: Kiến thức nền tảng, tư duy logic, tiềm năng học hỏi
+- Hỏi về: Kiến thức cơ bản, dự án học tập, khả năng giải quyết vấn đề đơn giản
+- VD: "Giải thích sự khác biệt giữa let, const, var trong JavaScript và khi nào dùng từng loại?"` :
+level === "junior" ?
+`- Junior: Kinh nghiệm thực tế 1-2 năm, làm việc độc lập
+- Hỏi về: Dự án đã làm, công nghệ đã dùng, xử lý bug, best practices
+- VD: "Kể về một bug khó bạn đã fix. Bạn debug như thế nào? Tools gì? Giải pháp cuối cùng?"` :
+level === "middle" ?
+`- Middle: 2-4 năm, thiết kế hệ thống, mentor junior
+- Hỏi về: Architecture design, performance optimization, code review, team collaboration
+- VD: "Thiết kế API RESTful cho hệ thống e-commerce. Xử lý authentication, pagination, caching như thế nào?"` :
+`- Senior/Lead: 4+ năm, leadership, technical decisions
+- Hỏi về: System design, scalability, tech stack decisions, mentoring, trade-offs
+- VD: "Hệ thống của bạn handle 1M users/day. Chiến lược scaling? Database sharding? Caching strategy? Cost optimization?"`}
+
+2️⃣ THEO VỊ TRÍ ${position}:
+${position.toLowerCase().includes("frontend") ? 
+`- Frontend: React/Vue/Angular, State management, Performance, Responsive, Accessibility
+- Hỏi sâu về: Component lifecycle, Virtual DOM, Webpack/Vite, Browser APIs, CSS-in-JS
+- Ví dụ thực tế về dự án, con số cụ thể (load time, bundle size)` :
+position.toLowerCase().includes("backend") ?
+`- Backend: API design, Database, Authentication, Caching, Message Queue, Microservices
+- Hỏi sâu về: SQL vs NoSQL, Indexing, N+1 problem, JWT vs Session, Redis, Docker
+- Ví dụ về throughput, latency, concurrent users` :
+position.toLowerCase().includes("fullstack") ?
+`- Fullstack: Frontend + Backend + DevOps
+- Hỏi về: End-to-end feature, CI/CD, Deployment, Monitoring, Security
+- Ví dụ về cả hai phía, integration, trade-offs` :
+position.toLowerCase().includes("devops") ?
+`- DevOps: Docker, Kubernetes, CI/CD, AWS/GCP, Terraform, Monitoring
+- Hỏi về: Container orchestration, Infrastructure as Code, zero-downtime deployment
+- Ví dụ về automation, incidents, cost savings` :
+position.toLowerCase().includes("ai") || position.toLowerCase().includes("ml") ?
+`- AI/ML: Algorithms, Training, Model evaluation, Data preprocessing, Deployment
+- Hỏi về: Overfitting, Feature engineering, Model selection, MLOps
+- Ví dụ về accuracy, F1-score, dataset size` :
+`- IT Professional: Technical skills, Problem solving, Communication, Teamwork
+- Hỏi về project experience, technologies used, challenges faced`}
+
+3️⃣ CẤU TRÚC CÂU HỎI (${questionCount} câu):
+- 1 câu: Giới thiệu (easy) - Kinh nghiệm, background
+- ${Math.floor(questionCount * 0.4)} câu: Kỹ thuật (medium-hard) - Chuyên sâu vào công nghệ
+- ${Math.floor(questionCount * 0.3)} câu: Kinh nghiệm/Tình huống (medium-hard) - Dự án thực tế, problem solving
+- ${Math.ceil(questionCount * 0.2)} câu: Soft skills (easy-medium) - Teamwork, learning, communication
+- 1 câu: Động lực/Vision (easy) - Career goal, why this position
+
+4️⃣ YÊU CẦU CHẤT LƯỢNG:
+✅ CÂU HỎI PHẢI:
+- CỤ THỂ, CHUYÊN SÂU, không chung chung
+- Yêu cầu ví dụ thực tế, số liệu, kinh nghiệm
+- Đánh giá được technical depth và practical experience
+- Open-ended để ứng viên trình bày chi tiết
+
+❌ TRÁNH:
+- Câu hỏi yes/no đơn giản
+- Câu hỏi lý thuyết suông không liên quan thực tế
+- Câu hỏi quá dễ không phân biệt được level
+- Câu hỏi "thuộc lòng" định nghĩa
+
+📝 MẪU CÂU HỎI TỐT:
+- "Kể về một lần bạn optimize performance cho [công nghệ]. Vấn đề gì? Metrics trước/sau? Tools dùng? Approach?"
+- "Thiết kế database schema cho [use case cụ thể]. Justify các quyết định về normalization, indexing, relationships"
+- "Bạn đã handle scalability như thế nào khi user tăng từ X lên Y? Bottleneck? Solutions? Trade-offs?"
+
+Ngôn ngữ: ${language === "vi" ? "Tiếng Việt (chuyên nghiệp, rõ ràng)" : "English (professional, clear)"}
+
+Trả về JSON array:
 [
   {
     "id": 1,
-    "text": "Câu hỏi...",
-    "category": "Loại câu hỏi",
-    "difficulty": "easy"
-  },
-  {
-    "id": 2,
-    "text": "Câu hỏi...",
-    "category": "Loại câu hỏi",
-    "difficulty": "medium"
+    "text": "Câu hỏi chi tiết, cụ thể, yêu cầu ví dụ thực tế...",
+    "category": "Giới thiệu/Kỹ thuật/Kinh nghiệm/Tình huống/Soft skills",
+    "difficulty": "easy/medium/hard"
   }
 ]
 
