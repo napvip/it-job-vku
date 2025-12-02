@@ -1,13 +1,16 @@
 "use client";
 
-import { Briefcase, Moon, Sun } from "lucide-react";
+import { Briefcase, Moon, Sun, User } from "lucide-react";
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { logoutUser } from "@/lib/firebase";
 
 export function Header() {
   const [isDark, setIsDark] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, userData, loading } = useAuth();
   
   const getCurrentPage = () => {
     if (pathname === "/") return "home";
@@ -18,6 +21,23 @@ export function Header() {
   };
   
   const currentPage = getCurrentPage();
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const handleDashboardNavigation = () => {
+    if (userData?.role === 'employer') {
+      router.push("/employer/dashboard");
+    } else {
+      router.push("/candidate/dashboard");
+    }
+  };
 
   return (
     <header className="bg-[#265073] text-white sticky top-0 z-50">
@@ -86,18 +106,48 @@ export function Header() {
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <button 
-              onClick={() => router.push("/login")}
-              className="px-4 py-2 border border-white rounded-lg hover:bg-[#9AD0C2] hover:text-[#265073] hover:border-[#9AD0C2] transition-all"
-            >
-              Đăng nhập
-            </button>
-            <button 
-              onClick={() => router.push("/register")}
-              className="px-4 py-2 bg-[#2D9596] rounded-lg hover:bg-[#37a8a7] transition-colors"
-            >
-              Đăng ký
-            </button>
+            
+            {!loading && (
+              <>
+                {user && userData ? (
+                  // User is logged in - show user info and dashboard button
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleDashboardNavigation}
+                      className="px-4 py-2 bg-[#2D9596] rounded-lg hover:bg-[#37a8a7] transition-colors"
+                    >
+                      Dashboard
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
+                      <User className="w-5 h-5" />
+                      <span className="hidden md:inline">{userData.displayName}</span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-2 border border-white rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                ) : (
+                  // User not logged in - show login/register buttons
+                  <>
+                    <button 
+                      onClick={() => router.push("/login")}
+                      className="px-4 py-2 border border-white rounded-lg hover:bg-[#9AD0C2] hover:text-[#265073] hover:border-[#9AD0C2] transition-all"
+                    >
+                      Đăng nhập
+                    </button>
+                    <button 
+                      onClick={() => router.push("/register")}
+                      className="px-4 py-2 bg-[#2D9596] rounded-lg hover:bg-[#37a8a7] transition-colors"
+                    >
+                      Đăng ký
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

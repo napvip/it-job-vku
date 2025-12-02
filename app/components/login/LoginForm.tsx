@@ -4,9 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { loginUser } from "@/lib/firebase";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 export function LoginForm() {
   const router = useRouter();
+  const { setUserData } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,25 +22,29 @@ export function LoginForm() {
     setError("");
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // For demo - in real app, handle actual authentication
-      if (email === "" || password === "") {
-        setError("Vui lòng điền đầy đủ thông tin");
-      } else {
-        // Success - check if employer or candidate
-        console.log("Login successful");
-        
-        // Check if employer email
-        if (email === "nhatuyendung@gmail.com" || email.includes("nhatuyendung") || email === "ntd@gmail.com") {
-          router.push("/employer/dashboard");
-        } else {
-          // Regular candidate
-          router.push("/candidate/dashboard");
-        }
+    try {
+      // Validate inputs
+      if (!email || !password) {
+        throw new Error("Vui lòng điền đầy đủ thông tin");
       }
-    }, 1500);
+
+      // Login with Firebase
+      const { user, userData } = await loginUser(email, password);
+      
+      // Update auth context
+      setUserData(userData);
+
+      // Redirect based on user role
+      if (userData.role === 'employer') {
+        router.push("/employer/dashboard");
+      } else {
+        router.push("/candidate/dashboard");
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {

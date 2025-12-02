@@ -19,10 +19,13 @@ import {
   BarChart3,
   Building2,
 } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { logoutUser } from "@/lib/firebase";
 
 export function EmployerHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const { userData, loading } = useAuth();
   
   const getCurrentPage = () => {
     if (pathname === "/employer/dashboard") return "employer-dashboard";
@@ -43,9 +46,18 @@ export function EmployerHeader() {
 
   // Mock company data
   const companyInfo = {
-    name: "FPT Software",
-    logo: "F",
+    name: loading ? "Đang tải..." : userData?.companyName || userData?.displayName || "Công ty",
+    logo: loading ? "..." : (userData?.companyName || userData?.displayName || "C")[0].toUpperCase(),
     role: "Nhà tuyển dụng",
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   // Notifications
@@ -354,7 +366,7 @@ export function EmployerHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            router.push("/");
+                            handleLogout();
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#FEE] transition-all duration-300 text-[#C9302C] group"
                         >

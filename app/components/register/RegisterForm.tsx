@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, User, Phone, Briefcase, Building2, Users, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { registerUser } from "@/lib/firebase";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface RegisterFormProps {
   onNavigateToLogin?: () => void;
@@ -12,6 +15,8 @@ type UserRole = "candidate" | "employer" | null;
 type PasswordStrength = "weak" | "medium" | "strong";
 
 export function RegisterForm({ onNavigateToLogin }: RegisterFormProps) {
+  const router = useRouter();
+  const { setUserData } = useAuth();
   const [role, setRole] = useState<UserRole>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -61,14 +66,52 @@ export function RegisterForm({ onNavigateToLogin }: RegisterFormProps) {
       return;
     }
 
+    if (!formData.name || !formData.email || !formData.password) {
+      setError("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Prepare additional data based on role
+      const additionalData: Record<string, string> = {};
+      
+      if (role === "candidate") {
+        if (formData.phone) additionalData.phone = formData.phone;
+        if (formData.position) additionalData.position = formData.position;
+        if (formData.level) additionalData.level = formData.level;
+      } else {
+        if (formData.phone) additionalData.phone = formData.phone;
+        if (formData.representative) additionalData.representative = formData.representative;
+        if (formData.companyType) additionalData.companyType = formData.companyType;
+        if (formData.companySize) additionalData.companySize = formData.companySize;
+        additionalData.companyName = formData.name;
+      }
+
+      // Register with Firebase
+      const { user, userData } = await registerUser(
+        formData.email,
+        formData.password,
+        formData.name,
+        role,
+        additionalData
+      );
+
+      // Update auth context
+      setUserData(userData);
+
+      // Redirect based on role
+      if (role === 'employer') {
+        router.push("/employer/dashboard");
+      } else {
+        router.push("/candidate/dashboard");
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setIsLoading(false);
-      console.log("Registration successful", { role, ...formData });
-      // Would show success modal or redirect
-    }, 1500);
+    }
   };
 
   const handleSocialRegister = (provider: string) => {

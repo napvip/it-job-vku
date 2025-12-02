@@ -24,16 +24,22 @@ import {
   BriefcaseBusiness,
   Eye,
   X,
+  Send,
 } from "lucide-react";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { logoutUser } from "@/lib/firebase";
 
 export function CandidateHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const { userData, loading } = useAuth();
   
   const getCurrentPage = () => {
     if (pathname === "/candidate/dashboard") return "dashboard";
     if (pathname === "/candidate/profile") return "profile";
     if (pathname === "/candidate/ai-recommendations") return "recommendations";
+    if (pathname === "/candidate/ai-interview") return "ai-interview";
+    if (pathname === "/candidate/submit-cv-with-ai") return "submit-cv-with-ai";
     if (pathname === "/candidate/applications") return "applications";
     if (pathname === "/candidate/interviews") return "interviews";
     if (pathname === "/candidate/messages") return "messages";
@@ -121,6 +127,15 @@ export function CandidateHeader() {
   const unreadNotifications = notifications.filter((n) => n.unread).length;
   const unreadMessages = messages.filter((m) => m.unread).length;
 
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   // Close all dropdowns when clicking outside
   const closeAllDropdowns = () => {
     setIsNotificationOpen(false);
@@ -201,17 +216,17 @@ export function CandidateHeader() {
                 <span>Việc làm</span>
               </button>
 
-              {/* Gợi ý AI */}
+              {/* Phỏng vấn AI */}
               <button
                 className={`px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center gap-2 relative ${
-                  currentPage === "recommendations"
+                  currentPage === "ai-interview"
                     ? "bg-[#2D9596] text-white shadow-md"
                     : "text-white hover:bg-white/10 hover:text-[#9AD0C2]"
                 }`}
-                onClick={() => router.push("/candidate/ai-recommendations")}
+                onClick={() => router.push("/candidate/ai-interview")}
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Gợi ý AI</span>
+                <span>Phỏng vấn AI</span>
                 <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#2D9596] text-white text-[9px] rounded-full border border-white/30">
                   AI
                 </span>
@@ -228,6 +243,22 @@ export function CandidateHeader() {
               >
                 <Building2 className="w-4 h-4" />
                 <span>Công ty</span>
+              </button>
+
+              {/* Gửi CV với AI */}
+              <button
+                className={`px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center gap-2 relative ${
+                  currentPage === "submit-cv-with-ai"
+                    ? "bg-[#2D9596] text-white shadow-md"
+                    : "text-white hover:bg-white/10 hover:text-[#9AD0C2]"
+                }`}
+                onClick={() => router.push("/candidate/submit-cv-with-ai")}
+              >
+                <Send className="w-4 h-4" />
+                <span>Gửi CV</span>
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#9AD0C2] text-[#265073] text-[9px] rounded-full border border-white/30">
+                  AI
+                </span>
               </button>
             </nav>
 
@@ -464,8 +495,12 @@ export function CandidateHeader() {
                     </div>
                   </div>
                   <div className="hidden xl:block text-left">
-                    <p className="text-white text-sm">Nguyễn Văn An</p>
-                    <p className="text-[#9AD0C2] text-xs">Senior Frontend</p>
+                    <p className="text-white text-sm">
+                      {loading ? "..." : userData?.displayName || "Người dùng"}
+                    </p>
+                    <p className="text-[#9AD0C2] text-xs">
+                      {loading ? "" : userData?.position || "Ứng viên IT"}
+                    </p>
                   </div>
                   <ChevronDown
                     className={`w-4 h-4 text-white transition-transform duration-300 hidden xl:block ${
@@ -493,9 +528,11 @@ export function CandidateHeader() {
                             </div>
                           </div>
                           <div className="flex-1">
-                            <p className="text-white mb-1">Nguyễn Văn An</p>
+                            <p className="text-white mb-1">
+                              {loading ? "Đang tải..." : userData?.displayName || "Người dùng"}
+                            </p>
                             <p className="text-xs text-white/80">
-                              nguyenvanan@email.com
+                              {loading ? "" : userData?.email || ""}
                             </p>
                           </div>
                         </div>
@@ -620,7 +657,7 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            router.push("/");
+                            handleLogout();
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition-all duration-300 text-red-600 group border-t border-gray-100 mt-2 pt-4"
                         >
@@ -663,11 +700,11 @@ export function CandidateHeader() {
 
             <button
               className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 relative ${
-                currentPage === "recommendations"
+                currentPage === "ai-interview"
                   ? "text-[#9AD0C2]"
                   : "text-white/70"
               }`}
-              onClick={() => router.push("/candidate/ai-recommendations")}
+              onClick={() => router.push("/candidate/ai-interview")}
             >
               <Sparkles className="w-5 h-5" />
               <span className="text-[10px]">AI</span>
