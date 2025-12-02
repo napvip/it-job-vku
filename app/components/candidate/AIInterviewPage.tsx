@@ -19,6 +19,15 @@ import {
   Send,
 } from "lucide-react";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 interface Question {
   id: number;
   text: string;
@@ -88,7 +97,9 @@ export function AIInterviewPage({ config, onExit, onNavigateToSubmitCV }: AIInte
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const recognitionRef = useRef<any>(null);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const currentTranscriptRef = useRef("");
 
   const currentQuestion = questions[currentQuestionIndex];
