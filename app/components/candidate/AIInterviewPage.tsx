@@ -95,6 +95,7 @@ export function AIInterviewPage({ config, onExit, onNavigateToSubmitCV }: AIInte
   const [isCompleted, setIsCompleted] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [micPermission, setMicPermission] = useState<"granted" | "denied" | "prompt">("prompt");
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   /* eslint-disable @typescript-eslint/no-explicit-any */
