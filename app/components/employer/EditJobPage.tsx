@@ -632,7 +632,7 @@ export function EditJobPage({ jobId }: EditJobPageProps) {
 
                 <div className="space-y-4">
                   <div className="flex gap-3">
-                    {["active", "paused", "closed"].map((status) => (
+                    {(["active", "paused", "closed"] as const).map((status) => (
                       <button
                         key={status}
                         type="button"

@@ -285,7 +285,7 @@ export function JobsPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              <JobSidebar jobs={transformedJobs} />
+              <JobSidebar />
             </div>
           </div>
         </div>

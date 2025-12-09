@@ -165,6 +165,7 @@ export function JobDetailPagePublic({ jobId }: JobDetailPagePublicProps) {
         candidatePhone,
         coverLetter,
         cvUrl: cvFile ? URL.createObjectURL(cvFile) : undefined,
+        status: 'pending',
       });
 
       alert("Ứng tuyển thành công!");

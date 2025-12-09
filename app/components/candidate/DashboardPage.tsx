@@ -47,7 +47,7 @@ export function DashboardPage() {
   // Calculate stats
   const totalApplications = applications.length;
   const pendingApplications = applications.filter(app => app.status === 'pending').length;
-  const reviewedApplications = applications.filter(app => app.status === 'reviewed').length;
+  const reviewingApplications = applications.filter(app => app.status === 'reviewing').length;
   const interviewApplications = applications.filter(app => app.status === 'interview').length;
   const acceptedApplications = applications.filter(app => app.status === 'accepted').length;
   const rejectedApplications = applications.filter(app => app.status === 'rejected').length;
@@ -55,7 +55,7 @@ export function DashboardPage() {
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { icon: typeof Clock; text: string; color: string; bgColor: string }> = {
       pending: { icon: Clock, text: "Chờ duyệt", color: "#F59E0B", bgColor: "#FEF3C7" },
-      reviewed: { icon: Eye, text: "Đã xem CV", color: "#3B82F6", bgColor: "#DBEAFE" },
+      reviewing: { icon: Eye, text: "Đang xem xét", color: "#3B82F6", bgColor: "#DBEAFE" },
       interview: { icon: Calendar, text: "Mời phỏng vấn", color: "#10B981", bgColor: "#D1FAE5" },
       accepted: { icon: CheckCircle, text: "Được nhận", color: "#22C55E", bgColor: "#DCFCE7" },
       rejected: { icon: XCircle, text: "Từ chối", color: "#EF4444", bgColor: "#FEE2E2" },
@@ -69,14 +69,6 @@ export function DashboardPage() {
       month: "2-digit",
       year: "numeric"
     });
-  };
-
-  const formatSalary = (salary: { min: number; max: number; currency: string }) => {
-    if (!salary) return "Thỏa thuận";
-    const format = (n: number) => n >= 1000000 
-      ? `${(n / 1000000).toFixed(0)}tr`
-      : `${(n / 1000).toFixed(0)}k`;
-    return `${format(salary.min)} - ${format(salary.max)} ${salary.currency}`;
   };
 
   if (loading) {
@@ -145,7 +137,7 @@ export function DashboardPage() {
           {[
             { label: "Tổng đơn ứng tuyển", value: totalApplications, icon: FileText, color: "#2D9596" },
             { label: "Chờ duyệt", value: pendingApplications, icon: Clock, color: "#F59E0B" },
-            { label: "Đã xem CV", value: reviewedApplications, icon: Eye, color: "#3B82F6" },
+            { label: "Đang xem xét", value: reviewingApplications, icon: Eye, color: "#3B82F6" },
             { label: "Mời phỏng vấn", value: interviewApplications, icon: Calendar, color: "#10B981" },
             { label: "Được nhận", value: acceptedApplications, icon: CheckCircle, color: "#22C55E" },
           ].map((stat, index) => (
@@ -183,7 +175,7 @@ export function DashboardPage() {
           <div className="flex flex-wrap gap-3">
             {[
               { label: "Chờ duyệt", count: pendingApplications, color: "#F59E0B" },
-              { label: "Đã xem CV", count: reviewedApplications, color: "#3B82F6" },
+              { label: "Đang xem xét", count: reviewingApplications, color: "#3B82F6" },
               { label: "Mời phỏng vấn", count: interviewApplications, color: "#10B981" },
               { label: "Được nhận", count: acceptedApplications, color: "#22C55E" },
               { label: "Từ chối", count: rejectedApplications, color: "#EF4444" },
@@ -264,7 +256,7 @@ export function DashboardPage() {
                             <h4 className="text-lg font-semibold text-[#265073] mb-1">
                               {app.jobInfo?.title || 'Vị trí công việc'}
                             </h4>
-                            <p className="text-[#2D9596]">{app.jobInfo?.company || 'Công ty'}</p>
+                            <p className="text-[#2D9596]">{app.jobInfo?.companyName || 'Công ty'}</p>
                           </div>
                         </div>
                         
@@ -275,16 +267,23 @@ export function DashboardPage() {
                               <span>{app.jobInfo.location}</span>
                             </div>
                           )}
-                          {app.jobInfo?.salary && (
+                          {(app.jobInfo?.salaryMin || app.jobInfo?.salaryMax) && !app.jobInfo?.hideSalary && (
                             <div className="flex items-center gap-1">
                               <DollarSign className="w-4 h-4" />
-                              <span>{formatSalary(app.jobInfo.salary)}</span>
+                              <span>
+                                {app.jobInfo.salaryMin && app.jobInfo.salaryMax 
+                                  ? `${app.jobInfo.salaryMin.toLocaleString()} - ${app.jobInfo.salaryMax.toLocaleString()} VND`
+                                  : app.jobInfo.salaryMax 
+                                    ? `Lên đến ${app.jobInfo.salaryMax.toLocaleString()} VND`
+                                    : `Từ ${app.jobInfo.salaryMin?.toLocaleString()} VND`
+                                }
+                              </span>
                             </div>
                           )}
-                          {app.jobInfo?.type && (
+                          {app.jobInfo?.workType && (
                             <div className="flex items-center gap-1">
                               <Briefcase className="w-4 h-4" />
-                              <span>{app.jobInfo.type}</span>
+                              <span>{app.jobInfo.workType}</span>
                             </div>
                           )}
                         </div>

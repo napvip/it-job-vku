@@ -54,7 +54,7 @@ export function ApplicationsPage() {
   const stats = {
     total: applications.length,
     pending: applications.filter((a) => a.status === "pending").length,
-    reviewed: applications.filter((a) => a.status === "reviewed").length,
+    reviewing: applications.filter((a) => a.status === "reviewing").length,
     interview: applications.filter((a) => a.status === "interview").length,
     accepted: applications.filter((a) => a.status === "accepted").length,
     rejected: applications.filter((a) => a.status === "rejected").length,
@@ -68,11 +68,11 @@ export function ApplicationsPage() {
         icon: Clock,
         label: "Chờ duyệt",
       },
-      reviewed: {
+      reviewing: {
         bg: "bg-[#DBEAFE]",
         text: "text-[#3B82F6]",
         icon: Eye,
-        label: "Đã xem CV",
+        label: "Đang xem xét",
       },
       interview: {
         bg: "bg-[#D1FAE5]",
@@ -102,16 +102,6 @@ export function ApplicationsPage() {
       month: "2-digit",
       year: "numeric",
     });
-  };
-
-  const formatSalary = (salary: { min: number; max: number; currency: string } | undefined) => {
-    if (!salary) return "Thỏa thuận";
-    const format = (n: number) => {
-      if (n >= 1000000) return `${(n / 1000000).toFixed(0)} triệu`;
-      if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
-      return `$${n}`;
-    };
-    return `${format(salary.min)} - ${format(salary.max)}`;
   };
 
   const filteredApplications =
@@ -188,7 +178,7 @@ export function ApplicationsPage() {
                     >
                       <option value="all">Tất cả trạng thái</option>
                       <option value="pending">Chờ duyệt</option>
-                      <option value="reviewed">Đã xem CV</option>
+                      <option value="reviewing">Đang xem xét</option>
                       <option value="interview">Mời phỏng vấn</option>
                       <option value="accepted">Được nhận</option>
                       <option value="rejected">Từ chối</option>
@@ -268,7 +258,7 @@ export function ApplicationsPage() {
                           <div className="flex flex-wrap items-center gap-4 text-sm mb-3">
                             <div className="flex items-center gap-1.5 text-[#2D9596]">
                               <Building2 className="w-4 h-4" />
-                              <span>{app.jobInfo?.company || "Công ty"}</span>
+                              <span>{app.jobInfo?.companyName || "Công ty"}</span>
                             </div>
                             {app.jobInfo?.location && (
                               <div className="flex items-center gap-1.5 text-[#265073]/70">
@@ -276,9 +266,14 @@ export function ApplicationsPage() {
                                 <span>{app.jobInfo.location}</span>
                               </div>
                             )}
-                            {app.jobInfo?.salary && (
+                            {(app.jobInfo?.salaryMin || app.jobInfo?.salaryMax) && !app.jobInfo?.hideSalary && (
                               <div className="px-2 py-0.5 bg-[#2D9596] text-white rounded-full text-xs">
-                                {formatSalary(app.jobInfo.salary)}
+                                {app.jobInfo.salaryMin && app.jobInfo.salaryMax 
+                                  ? `${app.jobInfo.salaryMin.toLocaleString()} - ${app.jobInfo.salaryMax.toLocaleString()} VND`
+                                  : app.jobInfo.salaryMax 
+                                    ? `Lên đến ${app.jobInfo.salaryMax.toLocaleString()} VND`
+                                    : `Từ ${app.jobInfo.salaryMin?.toLocaleString()} VND`
+                                }
                               </div>
                             )}
                           </div>
@@ -364,7 +359,7 @@ export function ApplicationsPage() {
 
                   {[
                     { key: "pending", label: "Chờ duyệt", icon: Clock, color: "#F59E0B", bg: "#FEF3C7" },
-                    { key: "reviewed", label: "Đã xem CV", icon: Eye, color: "#3B82F6", bg: "#DBEAFE" },
+                    { key: "reviewing", label: "Đang xem xét", icon: Eye, color: "#3B82F6", bg: "#DBEAFE" },
                     { key: "interview", label: "Mời phỏng vấn", icon: Video, color: "#10B981", bg: "#D1FAE5" },
                     { key: "accepted", label: "Được nhận", icon: CheckCircle2, color: "#22C55E", bg: "#DCFCE7" },
                     { key: "rejected", label: "Từ chối", icon: XCircle, color: "#EF4444", bg: "#FEE2E2" },

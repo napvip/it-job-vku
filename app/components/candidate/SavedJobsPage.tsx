@@ -79,21 +79,11 @@ export function SavedJobsPage() {
     }
   };
 
-  const formatSalary = (salary: { min: number; max: number; currency: string } | undefined) => {
-    if (!salary) return "Thỏa thuận";
-    const format = (n: number) => {
-      if (n >= 1000000) return `${(n / 1000000).toFixed(0)} triệu`;
-      return `${(n / 1000).toFixed(0)}k`;
-    };
-    return `${format(salary.min)} - ${format(salary.max)}`;
-  };
-
   const getTypeBadgeStyle = (type: string | undefined) => {
     const styles: Record<string, string> = {
-      "Full-time": "border-2 border-[#265073] text-[#265073]",
-      "Part-time": "border-2 border-[#2D9596] text-[#2D9596]",
-      "Remote": "border-2 border-[#9AD0C2] text-[#265073]",
-      "Freelance": "border-2 border-[#F59E0B] text-[#F59E0B]",
+      "onsite": "border-2 border-[#265073] text-[#265073]",
+      "hybrid": "border-2 border-[#2D9596] text-[#2D9596]",
+      "remote": "border-2 border-[#9AD0C2] text-[#265073]",
     };
     return styles[type || ""] || "border-2 border-[#9AD0C2] text-[#265073]";
   };
@@ -102,11 +92,11 @@ export function SavedJobsPage() {
   const filteredJobs = savedJobs.filter(job => {
     const matchesSearch = 
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchTerm.toLowerCase());
+      (job.companyName || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLocation = locationFilter 
       ? job.location?.toLowerCase().includes(locationFilter.toLowerCase())
       : true;
-    const matchesType = typeFilter === "all" ? true : job.type === typeFilter;
+    const matchesType = typeFilter === "all" ? true : job.workType === typeFilter;
     
     return matchesSearch && matchesLocation && matchesType;
   });
@@ -258,15 +248,22 @@ export function SavedJobsPage() {
 
                         <div className="flex items-center gap-2 text-[#2D9596] mb-3">
                           <Building2 className="w-4 h-4" />
-                          <span>{job.company}</span>
+                          <span>{job.companyName || 'Công ty'}</span>
                         </div>
 
                         {/* Info Badges */}
                         <div className="flex flex-wrap items-center gap-2 mb-3">
-                          {job.salary && (
+                          {(job.salaryMin || job.salaryMax) && !job.hideSalary && (
                             <div className="flex items-center gap-1 px-2 py-1 bg-[#2D9596] text-white rounded-lg text-sm">
                               <DollarSign className="w-3 h-3" />
-                              <span>{formatSalary(job.salary)}</span>
+                              <span>
+                                {job.salaryMin && job.salaryMax 
+                                  ? `${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()} VND`
+                                  : job.salaryMax 
+                                    ? `Lên đến ${job.salaryMax.toLocaleString()} VND`
+                                    : `Từ ${job.salaryMin?.toLocaleString()} VND`
+                                }
+                              </span>
                             </div>
                           )}
                           {job.location && (
@@ -275,10 +272,10 @@ export function SavedJobsPage() {
                               <span>{job.location}</span>
                             </div>
                           )}
-                          {job.type && (
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm ${getTypeBadgeStyle(job.type)}`}>
+                          {job.workType && (
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm ${getTypeBadgeStyle(job.workType)}`}>
                               <Briefcase className="w-3 h-3" />
-                              <span>{job.type}</span>
+                              <span>{job.workType}</span>
                             </div>
                           )}
                         </div>
