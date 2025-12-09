@@ -7,7 +7,7 @@ export default function EmployerApplicants() {
   return (
     <>
       <EmployerHeader />
-      <EmployerApplicantsComponent jobId={null} />
+      <EmployerApplicantsComponent />
     </>
   );
 }

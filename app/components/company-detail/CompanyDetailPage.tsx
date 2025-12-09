@@ -1,184 +1,568 @@
 "use client";
 
-import { CompanyDetailBanner } from "./CompanyDetailBanner";
-import { CompanyDetailHeader } from "./CompanyDetailHeader";
-import { CompanyAbout } from "./CompanyAbout";
-import { CompanyCulture } from "./CompanyCulture";
-import { CompanyBenefits } from "./CompanyBenefits";
-import { CompanyJobs } from "./CompanyJobs";
-import { CompanyContactSidebar } from "./CompanyContactSidebar";
-import { CompanyQuickFacts } from "./CompanyQuickFacts";
-import { CompanySimilar } from "./CompanySimilar";
-import { CompanyReviewsSection } from "./CompanyReviewsSection";
-import { CompanyAISuggestions } from "../companies/CompanyAISuggestions";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import {
+  Building2,
+  MapPin,
+  Users,
+  Globe,
+  Mail,
+  Phone,
+  Briefcase,
+  Calendar,
+  ChevronLeft,
+  Star,
+  Heart,
+  Share2,
+  ExternalLink,
+} from "lucide-react";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-interface CompanyDetailPageProps {
-  companyId: number | null;
-  onJobClick?: (jobId: number) => void;
-  onCompanyClick?: (companyId: number) => void;
+interface Company {
+  id: string;
+  companyName: string;
+  displayName: string;
+  logo?: string;
+  industry?: string;
+  location?: string;
+  companySize?: string;
+  description?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  founded?: string;
+  about?: string;
+  mission?: string;
+  culture?: string;
+  benefits?: string[];
+  technologies?: string[];
+  images?: string[];
+  createdAt?: Date;
 }
 
-// Mock data - in real app, this would come from API based on companyId
-const companyData = {
-  header: {
-    name: "FPT Software",
-    logo: "💼",
-    industry: "Software Development – Cloud – AI",
-    size: "1000-5000 nhân viên",
-    location: "Hà Nội, TP. HCM, Đà Nẵng",
-    type: "Product Company",
-    website: "https://fptsoftware.com",
-    rating: 4.6,
-    reviewCount: 127,
-    jobCount: 28,
-  },
-  about: {
-    mission: "FPT Software cam kết mang đến những giải pháp công nghệ tiên tiến nhất, giúp khách hàng chuyển đổi số thành công và tạo ra giá trị bền vững trong kỷ nguyên số.",
-    history: "Thành lập từ năm 1999, FPT Software đã trải qua hơn 20 năm phát triển và hiện là công ty phần mềm hàng đầu Việt Nam với hơn 30,000 nhân viên trên toàn cầu. Chúng tôi phục vụ hơn 1,000 khách hàng ở 30+ quốc gia.",
-    technologies: "Chúng tôi chuyên sâu về AI/ML, Cloud Computing (AWS, Azure, GCP), Blockchain, IoT, Big Data Analytics, và các công nghệ tiên tiến khác. Đội ngũ kỹ sư của chúng tôi luôn cập nhật và làm chủ những công nghệ mới nhất.",
-    culture: "Văn hóa làm việc tại FPT Software khuyến khích sáng tạo, đổi mới và học hỏi liên tục. Chúng tôi tin rằng nhân viên hạnh phúc sẽ tạo ra sản phẩm chất lượng cao. Môi trường làm việc thân thiện, cởi mở với nhiều hoạt động team building.",
-    products: "Các sản phẩm tiêu biểu: Akabot (RPA Platform), FPT.AI (AI Platform), Camera.AI (Smart Surveillance), Smart City Solutions, Digital Banking Platform, Healthcare Management System.",
-    achievements: "Top 10 Software Outsourcing Company toàn cầu, Gartner Magic Quadrant, AWS Premier Partner, Microsoft Gold Partner, 50+ giải thưởng công nghệ quốc tế.",
-    officeImage: "https://images.unsplash.com/photo-1748346918817-0b1b6b2f9bab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjB3b3Jrc3BhY2UlMjB0ZWFtfGVufDF8fHx8MTc2MzI3MDM1MXww&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  cultureImages: [
-    "https://images.unsplash.com/photo-1748346918817-0b1b6b2f9bab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBvZmZpY2UlMjB3b3Jrc3BhY2UlMjB0ZWFtfGVufDF8fHx8MTc2MzI3MDM1MXww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1628017975048-74768e00219e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWNoJTIwc3RhcnR1cCUyMG9mZmljZXxlbnwxfHx8fDE3NjMyMDM0Njh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1716703432455-3045789de738?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb21wYW55JTIwdGVhbSUyMG1lZXRpbmd8ZW58MXx8fHwxNjMyNzAzNTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-  ],
-  benefits: [
-    "Bảo hiểm sức khỏe cao cấp cho bản thân và gia đình (100% lương)",
-    "Macbook Pro hoặc PC theo lựa chọn và nhu cầu công việc",
-    "Cơ hội onsite tại Nhật, Mỹ, Châu Âu, Singapore",
-    "Remote linh hoạt 2-3 ngày/tuần, flexible working hours",
-    "Team building hàng quý, company trip hàng năm",
-    "Thưởng dự án, thưởng hiệu suất, thưởng tháng 13",
-    "Văn phòng hiện đại, free coffee, snacks, gym",
-    "Hỗ trợ đào tạo, học chứng chỉ quốc tế (AWS, Azure, PMP...)",
-  ],
-  jobs: [
-    {
-      id: 1,
-      title: "Senior Full-stack Developer (NodeJS + React)",
-      location: "Hà Nội",
-      salary: "30-50 triệu",
-      type: "Full-time",
-      skills: ["NodeJS", "React", "TypeScript", "MongoDB"],
-      postedTime: "2 ngày trước",
-    },
-    {
-      id: 2,
-      title: "AI Engineer (Python + TensorFlow)",
-      location: "TP. Hồ Chí Minh",
-      salary: "35-60 triệu",
-      type: "Full-time",
-      skills: ["Python", "TensorFlow", "ML", "AI"],
-      postedTime: "3 ngày trước",
-    },
-    {
-      id: 3,
-      title: "DevOps Engineer (AWS + Docker)",
-      location: "Remote",
-      salary: "30-55 triệu",
-      type: "Remote",
-      skills: ["AWS", "Docker", "Kubernetes", "CI/CD"],
-      postedTime: "5 ngày trước",
-    },
-    {
-      id: 4,
-      title: "Mobile Developer (React Native)",
-      location: "Đà Nẵng",
-      salary: "25-45 triệu",
-      type: "Full-time",
-      skills: ["React Native", "iOS", "Android"],
-      postedTime: "1 tuần trước",
-    },
-    {
-      id: 5,
-      title: "Backend Java Developer",
-      location: "Hà Nội",
-      salary: "28-48 triệu",
-      type: "Full-time",
-      skills: ["Java", "Spring Boot", "MySQL", "Redis"],
-      postedTime: "1 tuần trước",
-    },
-  ],
-  contact: {
-    email: "hr@fpt-software.com",
-    phone: "024 7300 8866",
-    address: "Tầng 22, Keangnam Landmark 72, Phạm Hùng, Nam Từ Liêm, Hà Nội",
-    website: "https://fptsoftware.com",
-  },
-  quickFacts: {
-    founded: "1999",
-    technologies: ["Java", "NodeJS", "React", "Python", "AWS", "Azure", "Docker", "Kubernetes"],
-    totalEmployees: "30,000+",
-    branches: ["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Quy Nhơn", "Cần Thơ"],
-  },
-  similarCompanies: [
-    {
-      id: 2,
-      name: "VinTech AI",
-      logo: "🤖",
-      industry: "AI – Machine Learning",
-      location: "Hà Nội",
-      jobCount: 12,
-    },
-    {
-      id: 3,
-      name: "TechViet Solutions",
-      logo: "🚀",
-      industry: "Web Development",
-      location: "TP. HCM",
-      jobCount: 15,
-    },
-    {
-      id: 4,
-      name: "Cloud Solutions",
-      logo: "☁️",
-      industry: "Cloud Services",
-      location: "Remote",
-      jobCount: 8,
-    },
-  ],
-};
+interface Job {
+  id: string;
+  title: string;
+  location?: string;
+  salary?: string;
+  type?: string;
+  skills?: string[];
+  createdAt?: Date;
+}
 
-export function CompanyDetailPage({ companyId, onJobClick, onCompanyClick }: CompanyDetailPageProps) {
-  // In a real app, you would fetch company data based on companyId
-  
+interface CompanyDetailPageProps {
+  companyId: string | null;
+}
+
+export function CompanyDetailPage({ companyId }: CompanyDetailPageProps) {
+  const router = useRouter();
+  const [company, setCompany] = useState<Company | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  useEffect(() => {
+    if (companyId) {
+      loadCompanyData();
+    }
+  }, [companyId]);
+
+  const loadCompanyData = async () => {
+    if (!companyId) return;
+
+    try {
+      setLoading(true);
+
+      // Load company data
+      const companyDoc = await getDoc(doc(db, "users", companyId));
+      if (companyDoc.exists()) {
+        const data = companyDoc.data();
+        setCompany({
+          id: companyDoc.id,
+          companyName: data.companyName || data.displayName || "Công ty",
+          displayName: data.displayName || "",
+          logo: data.logo || "",
+          industry: data.industry || data.companyIndustry || "",
+          location: data.location || data.companyLocation || "",
+          companySize: data.companySize || data.size || "",
+          description: data.description || data.companyDescription || data.about || "",
+          website: data.website || data.companyWebsite || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || data.companyAddress || "",
+          founded: data.founded || data.establishedYear || "",
+          about: data.about || data.companyAbout || "",
+          mission: data.mission || "",
+          culture: data.culture || "",
+          benefits: data.benefits || [],
+          technologies: data.technologies || data.techStack || [],
+          images: data.images || data.companyImages || [],
+        });
+      }
+
+      // Load jobs for this company
+      const jobsRef = collection(db, "jobs");
+      const jobsQuery = query(jobsRef, where("employerId", "==", companyId));
+      const jobsSnapshot = await getDocs(jobsQuery);
+
+      const jobList: Job[] = [];
+      jobsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        jobList.push({
+          id: doc.id,
+          title: data.title || "",
+          location: data.location || "",
+          salary: data.salary || data.salaryRange || "",
+          type: data.type || data.jobType || "",
+          skills: data.skills || data.requirements || [],
+          createdAt: data.createdAt?.toDate(),
+        });
+      });
+
+      setJobs(jobList);
+    } catch (error) {
+      console.error("Error loading company:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJobClick = (jobId: string) => {
+    router.push(`/job/${jobId}`);
+  };
+
+  const getTimeAgo = (date?: Date) => {
+    if (!date) return "";
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Hôm nay";
+    if (days === 1) return "Hôm qua";
+    if (days < 7) return `${days} ngày trước`;
+    if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
+    return `${Math.floor(days / 30)} tháng trước`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#ECF4D6] pt-[72px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#2D9596] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#265073]">Đang tải thông tin công ty...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="min-h-screen bg-[#ECF4D6] pt-[72px] flex items-center justify-center">
+        <div className="text-center">
+          <Building2 className="w-16 h-16 text-[#9AD0C2] mx-auto mb-4" />
+          <h2 className="text-2xl text-[#265073] font-bold mb-2">Không tìm thấy công ty</h2>
+          <p className="text-[#265073]/70 mb-4">Công ty này không tồn tại hoặc đã bị xóa</p>
+          <button
+            onClick={() => router.push("/companies")}
+            className="px-6 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors"
+          >
+            Xem danh sách công ty
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <CompanyDetailBanner companyName={companyData.header.name} />
-      <CompanyDetailHeader company={companyData.header} />
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-12 gap-8">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-8">
-              <CompanyAbout about={companyData.about} />
-              <CompanyCulture images={companyData.cultureImages} />
-              <CompanyBenefits benefits={companyData.benefits} />
-              <CompanyJobs jobs={companyData.jobs} onJobClick={onJobClick} />
-              <CompanyReviewsSection />
-            </div>
-
-            {/* Right Column - Sidebar */}
-            <div className="lg:col-span-4">
-              <div className="sticky top-24">
-                <CompanyContactSidebar contact={companyData.contact} />
-                <CompanyQuickFacts facts={companyData.quickFacts} />
-                <CompanySimilar companies={companyData.similarCompanies} onCompanyClick={onCompanyClick} />
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#ECF4D6]">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-br from-[#265073] to-[#2D9596] pt-20 pb-32">
+        <div className="container mx-auto px-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Quay lại
+          </button>
         </div>
       </div>
 
-      {/* AI Suggestions */}
-      <CompanyAISuggestions />
+      {/* Company Card */}
+      <div className="container mx-auto px-4 -mt-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-xl p-6 mb-8"
+        >
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Logo */}
+            {company.logo ? (
+              <img
+                src={company.logo}
+                alt={company.companyName}
+                className="w-24 h-24 rounded-xl object-cover border-2 border-[#9AD0C2]"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-[#2D9596] to-[#265073] flex items-center justify-center text-white text-3xl font-bold">
+                {company.companyName?.charAt(0)?.toUpperCase() || "C"}
+              </div>
+            )}
+
+            {/* Info */}
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-[#265073] mb-2">
+                {company.companyName}
+              </h1>
+
+              <div className="flex flex-wrap gap-4 text-sm text-[#265073]/80 mb-4">
+                {company.industry && (
+                  <div className="flex items-center gap-1">
+                    <Building2 className="w-4 h-4 text-[#2D9596]" />
+                    {company.industry}
+                  </div>
+                )}
+                {company.companySize && (
+                  <div className="flex items-center gap-1">
+                    <Users className="w-4 h-4 text-[#2D9596]" />
+                    {company.companySize}
+                  </div>
+                )}
+                {company.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4 text-[#2D9596]" />
+                    {company.location}
+                  </div>
+                )}
+                {company.website && (
+                  <a
+                    href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[#2D9596] hover:underline"
+                  >
+                    <Globe className="w-4 h-4" />
+                    {company.website}
+                  </a>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => document.getElementById("jobs-section")?.scrollIntoView({ behavior: "smooth" })}
+                  className="px-6 py-2.5 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors font-medium"
+                >
+                  Xem {jobs.length} việc đang tuyển
+                </button>
+                <button
+                  onClick={() => setIsFollowing(!isFollowing)}
+                  className={`px-6 py-2.5 border-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${
+                    isFollowing
+                      ? "border-red-400 text-red-500 bg-red-50"
+                      : "border-[#9AD0C2] text-[#265073] hover:bg-[#ECF4D6]"
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 ${isFollowing ? "fill-current" : ""}`} />
+                  {isFollowing ? "Đang theo dõi" : "Theo dõi công ty"}
+                </button>
+                <button className="p-2.5 border-2 border-[#9AD0C2] text-[#265073] rounded-lg hover:bg-[#ECF4D6] transition-colors">
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Main Content */}
+        <div className="grid lg:grid-cols-3 gap-8 pb-12">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* About */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <h2 className="text-xl font-bold text-[#265073] mb-4">Giới thiệu công ty</h2>
+              {company.description ? (
+                <p className="text-[#265073]/80 leading-relaxed whitespace-pre-line">
+                  {company.description}
+                </p>
+              ) : (
+                <p className="text-[#265073]/50 italic">Chưa có thông tin giới thiệu</p>
+              )}
+
+              {company.mission && (
+                <div className="mt-4 p-4 bg-[#ECF4D6] rounded-lg">
+                  <h3 className="font-semibold text-[#265073] mb-2">Sứ mệnh</h3>
+                  <p className="text-[#265073]/80">{company.mission}</p>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Technologies */}
+            {company.technologies && company.technologies.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-xl shadow-md p-6"
+              >
+                <h2 className="text-xl font-bold text-[#265073] mb-4">Công nghệ sử dụng</h2>
+                <div className="flex flex-wrap gap-2">
+                  {company.technologies.map((tech, idx) => (
+                    <span
+                      key={idx}
+                      className="px-4 py-2 bg-[#9AD0C2] text-[#265073] rounded-lg font-medium"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Benefits */}
+            {company.benefits && company.benefits.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white rounded-xl shadow-md p-6"
+              >
+                <h2 className="text-xl font-bold text-[#265073] mb-4">Phúc lợi</h2>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {company.benefits.map((benefit, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 p-3 bg-[#ECF4D6] rounded-lg"
+                    >
+                      <Star className="w-5 h-5 text-[#2D9596] flex-shrink-0 mt-0.5" />
+                      <span className="text-[#265073]">{benefit}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Company Images */}
+            {company.images && company.images.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white rounded-xl shadow-md p-6"
+              >
+                <h2 className="text-xl font-bold text-[#265073] mb-4">Hình ảnh công ty</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {company.images.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img}
+                      alt={`${company.companyName} - ${idx + 1}`}
+                      className="w-full h-40 object-cover rounded-lg"
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Jobs */}
+            <motion.div
+              id="jobs-section"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <h2 className="text-xl font-bold text-[#265073] mb-4">
+                Việc làm đang tuyển ({jobs.length})
+              </h2>
+
+              {jobs.length === 0 ? (
+                <div className="text-center py-8">
+                  <Briefcase className="w-12 h-12 text-[#9AD0C2] mx-auto mb-3" />
+                  <p className="text-[#265073]/70">Hiện tại công ty chưa có việc làm nào</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {jobs.map((job) => (
+                    <div
+                      key={job.id}
+                      onClick={() => handleJobClick(job.id)}
+                      className="p-4 border border-[#9AD0C2] rounded-xl hover:shadow-md hover:border-[#2D9596] transition-all cursor-pointer group"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-[#265073] group-hover:text-[#2D9596] transition-colors">
+                          {job.title}
+                        </h3>
+                        <span className="text-sm text-[#265073]/60">{getTimeAgo(job.createdAt)}</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-3 text-sm text-[#265073]/80 mb-3">
+                        {job.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4 text-[#2D9596]" />
+                            {job.location}
+                          </span>
+                        )}
+                        {job.salary && (
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="w-4 h-4 text-[#2D9596]" />
+                            {job.salary}
+                          </span>
+                        )}
+                        {job.type && (
+                          <span className="px-2 py-0.5 bg-[#ECF4D6] text-[#265073] rounded text-xs">
+                            {job.type}
+                          </span>
+                        )}
+                      </div>
+
+                      {job.skills && job.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {job.skills.slice(0, 5).map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-[#9AD0C2]/50 text-[#265073] rounded text-xs"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                          {job.skills.length > 5 && (
+                            <span className="text-xs text-[#2D9596]">+{job.skills.length - 5}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Contact Info */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <h2 className="text-lg font-bold text-[#265073] mb-4">Thông tin liên hệ</h2>
+              <div className="space-y-4">
+                {company.email && (
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-5 h-5 text-[#2D9596] mt-0.5" />
+                    <div>
+                      <div className="text-sm text-[#265073]/70">Email</div>
+                      <a href={`mailto:${company.email}`} className="text-[#2D9596] hover:underline">
+                        {company.email}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {company.phone && (
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-5 h-5 text-[#2D9596] mt-0.5" />
+                    <div>
+                      <div className="text-sm text-[#265073]/70">Số điện thoại</div>
+                      <a href={`tel:${company.phone}`} className="text-[#2D9596] hover:underline">
+                        {company.phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {company.address && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-[#2D9596] mt-0.5" />
+                    <div>
+                      <div className="text-sm text-[#265073]/70">Địa chỉ</div>
+                      <div className="text-[#265073]">{company.address}</div>
+                    </div>
+                  </div>
+                )}
+                {company.website && (
+                  <div className="flex items-start gap-3">
+                    <Globe className="w-5 h-5 text-[#2D9596] mt-0.5" />
+                    <div>
+                      <div className="text-sm text-[#265073]/70">Website</div>
+                      <a
+                        href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2D9596] hover:underline flex items-center gap-1"
+                      >
+                        {company.website}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Quick Facts */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-xl shadow-md p-6"
+            >
+              <h2 className="text-lg font-bold text-[#265073] mb-4">Thông tin nhanh</h2>
+              <div className="space-y-3">
+                {company.founded && (
+                  <div className="flex justify-between">
+                    <span className="text-[#265073]/70">Năm thành lập</span>
+                    <span className="font-medium text-[#265073]">{company.founded}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-[#265073]/70">Quy mô</span>
+                  <span className="font-medium text-[#265073]">{company.companySize || "Chưa cập nhật"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#265073]/70">Ngành nghề</span>
+                  <span className="font-medium text-[#265073]">{company.industry || "Chưa cập nhật"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#265073]/70">Việc làm</span>
+                  <span className="font-medium text-[#2D9596]">{jobs.length} vị trí</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-xl shadow-md p-6 text-white text-center"
+            >
+              <h3 className="font-bold text-lg mb-2">Quan tâm đến công ty này?</h3>
+              <p className="text-white/80 text-sm mb-4">
+                Theo dõi để nhận thông báo khi có việc làm mới
+              </p>
+              <button
+                onClick={() => setIsFollowing(!isFollowing)}
+                className={`w-full py-2.5 rounded-lg font-medium transition-colors ${
+                  isFollowing
+                    ? "bg-white text-[#265073]"
+                    : "bg-white/20 hover:bg-white/30 text-white"
+                }`}
+              >
+                {isFollowing ? "✓ Đang theo dõi" : "Theo dõi công ty"}
+              </button>
+            </motion.div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-

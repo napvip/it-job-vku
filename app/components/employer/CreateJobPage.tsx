@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   Sparkles,
   MapPin,
@@ -17,16 +18,19 @@ import {
   Briefcase,
   ChevronDown,
 } from "lucide-react";
+import { createJob } from "../../../lib/firebase";
+import { auth } from "../../../lib/firebase";
 
 interface CreateJobPageProps {
   onNavigateToJobs?: () => void;
-  onNavigateToJobDetail?: (jobId: number) => void;
+  onNavigateToJobDetail?: (jobId: string) => void;
 }
 
 export function CreateJobPage({
   onNavigateToJobs,
   onNavigateToJobDetail,
 }: CreateJobPageProps) {
+  const router = useRouter();
   const [jobTitle, setJobTitle] = useState("");
   const [level, setLevel] = useState("middle");
   const [workType, setWorkType] = useState<
@@ -51,6 +55,8 @@ export function CreateJobPage({
   const [quickApply, setQuickApply] = useState(true);
   const [customCV, setCustomCV] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
 
   const suggestedSkills = [
     "ReactJS",
@@ -85,17 +91,104 @@ export function CreateJobPage({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API call
-    setTimeout(() => {
+    
+    // Validate required fields
+    if (!jobTitle || !workType || !location || !description || !requirements || !benefits || !deadline) {
+      alert("Vui lòng điền đầy đủ các trường bắt buộc!");
+      return;
+    }
+
+    // Check if user is logged in
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Bạn cần đăng nhập để đăng tin tuyển dụng!");
+      router.push("/login");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create job data
+      const jobData = {
+        companyId: currentUser.uid,
+        title: jobTitle,
+        level,
+        workType,
+        location,
+        salaryMin: salaryMin ? parseFloat(salaryMin) : undefined,
+        salaryMax: salaryMax ? parseFloat(salaryMax) : undefined,
+        hideSalary,
+        description,
+        requirements,
+        benefits,
+        skills,
+        quantity: parseInt(quantity),
+        deadline,
+        contractType,
+        gender,
+        education,
+        status: status === "publish" ? "active" as const : "draft" as const,
+        autoRefresh,
+        quickApply,
+        customCV,
+      };
+
+      // Save to Firebase
+      const jobId = await createJob(jobData);
+      setCreatedJobId(jobId);
       setShowSuccessModal(true);
-    }, 1000);
+    } catch (error) {
+      console.error("Error creating job:", error);
+      alert("Có lỗi xảy ra khi đăng tin tuyển dụng. Vui lòng thử lại!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSaveDraft = () => {
-    // Save as draft
-    alert("Đã lưu nháp!");
+  const handleSaveDraft = async () => {
+    // Check if user is logged in
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Bạn cần đăng nhập để lưu nháp!");
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const jobData = {
+        companyId: currentUser.uid,
+        title: jobTitle || "Tin tuyển dụng chưa có tên",
+        level,
+        workType: workType || "onsite" as const,
+        location: location || "",
+        salaryMin: salaryMin ? parseFloat(salaryMin) : undefined,
+        salaryMax: salaryMax ? parseFloat(salaryMax) : undefined,
+        hideSalary,
+        description: description || "",
+        requirements: requirements || "",
+        benefits: benefits || "",
+        skills,
+        quantity: parseInt(quantity) || 1,
+        deadline: deadline || "",
+        contractType,
+        gender,
+        education,
+        status: "draft" as const,
+        autoRefresh,
+        quickApply,
+        customCV,
+      };
+
+      await createJob(jobData);
+      alert("Đã lưu nháp thành công!");
+      router.push("/employer/jobs");
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      alert("Có lỗi xảy ra khi lưu nháp. Vui lòng thử lại!");
+    }
   };
 
   return (
@@ -664,10 +757,11 @@ export function CreateJobPage({
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-8 py-3 bg-[#265073] text-white rounded-xl hover:bg-[#2D9596] transition-colors shadow-lg flex items-center gap-2"
+            disabled={isSubmitting}
+            className="px-8 py-3 bg-[#265073] text-white rounded-xl hover:bg-[#2D9596] transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check className="w-5 h-5" />
-            Đăng tin tuyển dụng
+            {isSubmitting ? "Đang đăng..." : "Đăng tin tuyển dụng"}
           </button>
         </div>
       </motion.div>
@@ -706,7 +800,9 @@ export function CreateJobPage({
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    onNavigateToJobDetail?.(1);
+                    if (createdJobId) {
+                      router.push(`/employer/jobs/${createdJobId}`);
+                    }
                   }}
                   className="w-full px-6 py-3 bg-[#265073] text-white rounded-xl hover:bg-[#265073]/80 transition-colors"
                 >
@@ -716,7 +812,7 @@ export function CreateJobPage({
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    // Navigate to AI matching
+                    router.push("/employer/ai-matching");
                   }}
                   className="w-full px-6 py-3 bg-white/20 hover:bg-white/30 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
@@ -727,12 +823,12 @@ export function CreateJobPage({
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    onNavigateToJobs?.();
+                    router.push("/employer/jobs");
                   }}
                   className="w-full px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   <Share2 className="w-5 h-5" />
-                  Chia sẻ trên mạng xã hội
+                  Quay lại danh sách
                 </button>
               </div>
 

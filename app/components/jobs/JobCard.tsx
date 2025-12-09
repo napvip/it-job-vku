@@ -1,11 +1,12 @@
 "use client";
 
-import { MapPin, DollarSign, Clock, Bookmark, Building2 } from "lucide-react";
+import { MapPin, DollarSign, Clock, Bookmark, Building2, Heart } from "lucide-react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 interface JobCardProps {
   job: {
-    id: number;
+    id: string | number;
     title: string;
     company: string;
     location: string;
@@ -14,24 +15,31 @@ interface JobCardProps {
     skills: string[];
     logo: string;
     postedTime: string;
+    isSaved?: boolean;
   };
-  onJobClick?: (jobId: number) => void;
+  onSave?: (e: React.MouseEvent) => void;
 }
 
-export function JobCard({ job, onJobClick }: JobCardProps) {
+export function JobCard({ job, onSave }: JobCardProps) {
+  const router = useRouter();
+
+  const handleClick = () => {
+    router.push(`/job/${job.id}`);
+  };
+
   return (
     <motion.div
       whileHover={{ 
         y: -3,
         boxShadow: "0 8px 24px rgba(154,208,194,0.25)"
       }}
-      onClick={() => onJobClick?.(job.id)}
+      onClick={handleClick}
       className="bg-[#ECF4D6] rounded-2xl p-6 border border-[#9AD0C2] hover:border-[#2D9596] transition-all cursor-pointer"
     >
       <div className="flex gap-4">
         {/* Logo */}
         <div className="flex-shrink-0">
-          <div className="w-16 h-16 bg-[#9AD0C2] rounded-xl flex items-center justify-center text-2xl">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-xl flex items-center justify-center text-2xl text-white font-bold">
             {job.logo}
           </div>
         </div>
@@ -40,7 +48,7 @@ export function JobCard({ job, onJobClick }: JobCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4 mb-3">
             <div className="flex-1">
-              <h3 className="text-[#265073] text-lg mb-1 hover:text-[#2D9596] transition-colors">
+              <h3 className="text-[#265073] text-lg mb-1 hover:text-[#2D9596] transition-colors font-semibold">
                 {job.title}
               </h3>
               <div className="flex items-center gap-2 text-[#2D9596]">
@@ -49,10 +57,17 @@ export function JobCard({ job, onJobClick }: JobCardProps) {
               </div>
             </div>
             <button 
-              onClick={(e) => e.stopPropagation()}
-              className="p-2 hover:bg-white/50 rounded-lg transition-colors flex-shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSave?.(e);
+              }}
+              className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
+                job.isSaved 
+                  ? "bg-red-50 text-red-500" 
+                  : "hover:bg-white/50 text-[#2D9596]"
+              }`}
             >
-              <Bookmark className="w-5 h-5 text-[#2D9596]" />
+              <Heart className={`w-5 h-5 ${job.isSaved ? "fill-current" : ""}`} />
             </button>
           </div>
 
@@ -93,7 +108,7 @@ export function JobCard({ job, onJobClick }: JobCardProps) {
             <div className="flex-shrink-0">
               <div className="px-4 py-2 bg-[#2D9596] text-white rounded-lg flex items-center gap-1">
                 <DollarSign className="w-4 h-4" />
-                <span className="text-sm">{job.salary}</span>
+                <span className="text-sm font-medium">{job.salary}</span>
               </div>
             </div>
           </div>

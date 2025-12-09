@@ -48,6 +48,7 @@ export function EmployerHeader() {
   const companyInfo = {
     name: loading ? "Đang tải..." : userData?.companyName || userData?.displayName || "Công ty",
     logo: loading ? "..." : (userData?.companyName || userData?.displayName || "C")[0].toUpperCase(),
+    logoUrl: (userData as unknown as { logo?: string })?.logo || "",
     role: "Nhà tuyển dụng",
   };
 
@@ -288,9 +289,17 @@ export function EmployerHeader() {
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 className="flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-[#ECF4D6] transition-all"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-full flex items-center justify-center text-white flex-shrink-0">
-                  {companyInfo.logo}
-                </div>
+                {companyInfo.logoUrl ? (
+                  <img
+                    src={companyInfo.logoUrl}
+                    alt={companyInfo.name}
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-full flex items-center justify-center text-white flex-shrink-0">
+                    {companyInfo.logo}
+                  </div>
+                )}
                 <div className="hidden md:block text-left">
                   <div className="text-[#265073] text-sm font-medium">
                     {companyInfo.name}
@@ -324,9 +333,17 @@ export function EmployerHeader() {
                     >
                       <div className="p-5 border-b-2 border-[#9AD0C2] bg-[#ECF4D6]">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-full flex items-center justify-center text-white text-xl">
-                            {companyInfo.logo}
-                          </div>
+                          {companyInfo.logoUrl ? (
+                            <img
+                              src={companyInfo.logoUrl}
+                              alt={companyInfo.name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-full flex items-center justify-center text-white text-xl">
+                              {companyInfo.logo}
+                            </div>
+                          )}
                           <div>
                             <div className="text-[#265073] font-medium">
                               {companyInfo.name}

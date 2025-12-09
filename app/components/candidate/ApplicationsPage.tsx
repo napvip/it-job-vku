@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   ClipboardCheck,
   Building2,
@@ -11,196 +11,107 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Video,
   Filter,
-  X,
   FileText,
   TrendingUp,
   Sparkles,
-  Search,
+  Briefcase,
 } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { getCandidateApplications, JobApplication, JobData } from "../../../lib/firebase";
 
-interface ApplicationsPageProps {
-  onJobClick?: (jobId: number) => void;
-  onApplicationClick?: (applicationId: number) => void;
+interface ApplicationWithJob extends JobApplication {
+  jobInfo?: JobData;
 }
 
-export function ApplicationsPage({ onJobClick, onApplicationClick }: ApplicationsPageProps) {
-  const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+export function ApplicationsPage() {
+  const { user } = useAuth();
+  const [applications, setApplications] = useState<ApplicationWithJob[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Mock data: Applications
-  const applications = [
-    {
-      id: 1,
-      jobTitle: "Senior Frontend Developer (ReactJS)",
-      company: "TechViet Solutions",
-      companyLogo: "🏢",
-      location: "Hà Nội",
-      appliedDate: "15/11/2025",
-      status: "interview",
-      statusText: "Mời phỏng vấn",
-      interviewDate: "20/11/2025 14:00",
-      salary: "$2000 - $3500",
-      jobId: 1,
-    },
-    {
-      id: 2,
-      jobTitle: "Full-stack Developer (React + NodeJS)",
-      company: "VNG Corporation",
-      companyLogo: "🎮",
-      location: "TP.HCM",
-      appliedDate: "12/11/2025",
-      status: "reviewing",
-      statusText: "Đang xem xét",
-      salary: "$2500 - $4000",
-      jobId: 2,
-    },
-    {
-      id: 3,
-      jobTitle: "React Native Developer",
-      company: "Momo E-Wallet",
-      companyLogo: "💰",
-      location: "Hà Nội",
-      appliedDate: "10/11/2025",
-      status: "viewed",
-      statusText: "Đã xem CV",
-      salary: "$1800 - $3000",
-      jobId: 3,
-    },
-    {
-      id: 4,
-      jobTitle: "Frontend Engineer (NextJS)",
-      company: "FPT Software",
-      companyLogo: "🏭",
-      location: "Đà Nẵng",
-      appliedDate: "08/11/2025",
-      status: "pending",
-      statusText: "Chờ duyệt",
-      salary: "$2200 - $3800",
-      jobId: 4,
-    },
-    {
-      id: 5,
-      jobTitle: "UI/UX Engineer (React)",
-      company: "Tiki Corporation",
-      companyLogo: "🛒",
-      location: "TP.HCM",
-      appliedDate: "05/11/2025",
-      status: "rejected",
-      statusText: "Từ chối",
-      rejectReason: "Vị trí đã được tuyển đủ",
-      salary: "$1500 - $2800",
-      jobId: 5,
-    },
-    {
-      id: 6,
-      jobTitle: "Senior React Developer",
-      company: "Shopee Vietnam",
-      companyLogo: "🛍️",
-      location: "TP.HCM",
-      appliedDate: "03/11/2025",
-      status: "interviewed",
-      statusText: "Đã phỏng vấn",
-      interviewDate: "08/11/2025",
-      salary: "$3000 - $5000",
-      jobId: 6,
-    },
-    {
-      id: 7,
-      jobTitle: "Frontend Lead (React)",
-      company: "Zalopay",
-      companyLogo: "💳",
-      location: "Hà Nội",
-      appliedDate: "01/11/2025",
-      status: "closed",
-      statusText: "Đóng tuyển",
-      salary: "$3500 - $6000",
-      jobId: 7,
-    },
-  ];
+  useEffect(() => {
+    const fetchApplications = async () => {
+      if (!user) return;
 
-  // Statistics
+      try {
+        setLoading(true);
+        const data = await getCandidateApplications(user.uid);
+        setApplications(data);
+      } catch (error) {
+        console.error("Error fetching applications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, [user]);
+
+  // Calculate stats
   const stats = {
     total: applications.length,
     pending: applications.filter((a) => a.status === "pending").length,
-    viewed: applications.filter((a) => a.status === "viewed").length,
-    reviewing: applications.filter((a) => a.status === "reviewing").length,
+    reviewed: applications.filter((a) => a.status === "reviewed").length,
     interview: applications.filter((a) => a.status === "interview").length,
+    accepted: applications.filter((a) => a.status === "accepted").length,
     rejected: applications.filter((a) => a.status === "rejected").length,
   };
 
-  // Related job suggestions
-  const suggestedJobs = [
-    {
-      id: 101,
-      title: "Senior React Developer",
-      company: "Google Vietnam",
-      salary: "$4000 - $7000",
-      matchScore: 95,
-    },
-    {
-      id: 102,
-      title: "Frontend Architect",
-      company: "Microsoft Vietnam",
-      salary: "$5000 - $8000",
-      matchScore: 88,
-    },
-    {
-      id: 103,
-      title: "Lead Frontend Engineer",
-      company: "Meta Vietnam",
-      salary: "$4500 - $7500",
-      matchScore: 92,
-    },
-  ];
-
-  const getStatusBadge = (status: string) => {
-    const styles: Record<
-      string,
-      { bg: string; text: string; icon: any; border?: string }
-    > = {
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, { bg: string; text: string; icon: typeof Clock; label: string }> = {
       pending: {
-        bg: "bg-[#9AD0C2]",
-        text: "text-[#265073]",
+        bg: "bg-[#FEF3C7]",
+        text: "text-[#F59E0B]",
         icon: Clock,
+        label: "Chờ duyệt",
       },
-      viewed: {
-        bg: "bg-[#2D9596]",
-        text: "text-white",
+      reviewed: {
+        bg: "bg-[#DBEAFE]",
+        text: "text-[#3B82F6]",
         icon: Eye,
-      },
-      reviewing: {
-        bg: "bg-white",
-        text: "text-[#2D9596]",
-        icon: AlertCircle,
-        border: "border-2 border-[#2D9596]",
+        label: "Đã xem CV",
       },
       interview: {
-        bg: "bg-[#1EAD7B]",
-        text: "text-white",
+        bg: "bg-[#D1FAE5]",
+        text: "text-[#10B981]",
         icon: Video,
+        label: "Mời phỏng vấn",
       },
-      interviewed: {
-        bg: "bg-[#9AD0C2]",
-        text: "text-[#265073]",
+      accepted: {
+        bg: "bg-[#DCFCE7]",
+        text: "text-[#22C55E]",
         icon: CheckCircle2,
+        label: "Được nhận",
       },
       rejected: {
-        bg: "bg-[#F8D7DA]",
-        text: "text-[#C9302C]",
+        bg: "bg-[#FEE2E2]",
+        text: "text-[#EF4444]",
         icon: XCircle,
-      },
-      closed: {
-        bg: "bg-[#DADADA]",
-        text: "text-[#666666]",
-        icon: XCircle,
+        label: "Từ chối",
       },
     };
+    return configs[status] || configs.pending;
+  };
 
-    return styles[status] || styles.pending;
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const formatSalary = (salary: { min: number; max: number; currency: string } | undefined) => {
+    if (!salary) return "Thỏa thuận";
+    const format = (n: number) => {
+      if (n >= 1000000) return `${(n / 1000000).toFixed(0)} triệu`;
+      if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
+      return `$${n}`;
+    };
+    return `${format(salary.min)} - ${format(salary.max)}`;
   };
 
   const filteredApplications =
@@ -208,11 +119,20 @@ export function ApplicationsPage({ onJobClick, onApplicationClick }: Application
       ? applications
       : applications.filter((app) => app.status === selectedStatus);
 
-  const hasApplications = applications.length > 0;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#ECF4D6] pt-16 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#2D9596] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#265073]">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#ECF4D6] pt-16">
-      {/* ========== HEADER ========== */}
+      {/* Header */}
       <div className="bg-[#ECF4D6] py-6 border-b-2 border-[#9AD0C2]/30">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
@@ -220,14 +140,14 @@ export function ApplicationsPage({ onJobClick, onApplicationClick }: Application
             animate={{ opacity: 1, y: 0 }}
             className="flex items-start gap-4"
           >
-            <div className="w-16 h-16 bg-gradient-to-br from-[#2D9596] to-[#9AD0C2] rounded-2xl flex items-center justify-center flex-shrink-0">
-              <ClipboardCheck className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 bg-gradient-to-br from-[#2D9596] to-[#9AD0C2] rounded-xl flex items-center justify-center">
+              <ClipboardCheck className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-[#265073] text-4xl mb-3">
+              <h1 className="text-[#265073] text-3xl font-bold mb-2">
                 Lịch sử ứng tuyển
               </h1>
-              <p className="text-[#2D9596] text-lg max-w-2xl">
+              <p className="text-[#2D9596]">
                 Theo dõi tiến trình và trạng thái các công việc bạn đã ứng tuyển.
               </p>
             </div>
@@ -236,389 +156,270 @@ export function ApplicationsPage({ onJobClick, onApplicationClick }: Application
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-8">
-          {/* ========== MAIN CONTENT ========== */}
+        <div className="flex gap-6">
+          {/* Main Content */}
           <div className="flex-1">
-            {/* FILTER BAR */}
-            {hasApplications && (
+            {/* Filter Bar */}
+            {applications.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-[#9AD0C2] p-6 mb-6 shadow-sm"
+                className="bg-white rounded-xl border-2 border-[#9AD0C2] p-4 mb-6"
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Filter className="w-5 h-5 text-[#2D9596]" />
-                    <h3 className="text-[#265073]">Bộ lọc</h3>
+                    <span className="text-[#265073] font-medium">Bộ lọc</span>
                   </div>
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="text-[#2D9596] text-sm hover:text-[#265073] transition-colors"
+                    className="text-[#2D9596] text-sm hover:text-[#265073]"
                   >
                     {showFilters ? "Ẩn" : "Hiển thị"}
                   </button>
                 </div>
 
                 {showFilters && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4"
-                  >
-                    <div>
-                      <label className="block text-[#265073] text-sm mb-2">
-                        Từ khóa
-                      </label>
-                      <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#2D9596]" />
-                        <input
-                          type="text"
-                          placeholder="Tên công việc, công ty..."
-                          className="w-full pl-10 pr-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none transition-colors"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[#265073] text-sm mb-2">
-                        Công ty
-                      </label>
-                      <select className="w-full px-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none transition-colors">
-                        <option>Tất cả công ty</option>
-                        <option>TechViet Solutions</option>
-                        <option>VNG Corporation</option>
-                        <option>FPT Software</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[#265073] text-sm mb-2">
-                        Trạng thái
-                      </label>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="w-full px-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none transition-colors"
-                      >
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="pending">Chờ duyệt</option>
-                        <option value="viewed">Đã xem CV</option>
-                        <option value="reviewing">Đang xem xét</option>
-                        <option value="interview">Mời phỏng vấn</option>
-                        <option value="interviewed">Đã phỏng vấn</option>
-                        <option value="rejected">Từ chối</option>
-                        <option value="closed">Đóng tuyển</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[#265073] text-sm mb-2">
-                        Từ ngày
-                      </label>
-                      <input
-                        type="date"
-                        className="w-full px-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[#265073] text-sm mb-2">
-                        Đến ngày
-                      </label>
-                      <input
-                        type="date"
-                        className="w-full px-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[#265073] text-sm mb-2">
-                        Địa điểm
-                      </label>
-                      <select className="w-full px-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none transition-colors">
-                        <option>Tất cả địa điểm</option>
-                        <option>Hà Nội</option>
-                        <option>TP.HCM</option>
-                        <option>Đà Nẵng</option>
-                      </select>
-                    </div>
-                  </motion.div>
-                )}
-
-                <div className="flex gap-3">
-                  <button className="px-6 py-2 bg-[#265073] text-white rounded-lg hover:bg-[#2D9596] transition-colors">
-                    Áp dụng lọc
-                  </button>
-                  <button
-                    onClick={() => setSelectedStatus("all")}
-                    className="px-6 py-2 text-[#2D9596] hover:text-[#265073] transition-colors"
-                  >
-                    Xóa lọc
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* APPLICATIONS LIST */}
-            {hasApplications ? (
-              <>
-                <div className="space-y-5">
-                  {filteredApplications.map((app, index) => {
-                    const statusStyle = getStatusBadge(app.status);
-                    const StatusIcon = statusStyle.icon;
-
-                    return (
-                      <motion.div
-                        key={app.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-[#ECF4D6] rounded-2xl border-2 border-[#9AD0C2] p-6 shadow-sm hover:shadow-md hover:border-[#2D9596] transition-all duration-300"
-                      >
-                        <div className="flex gap-6">
-                          {/* Company Logo */}
-                          <div className="flex-shrink-0">
-                            <div className="w-14 h-14 bg-gradient-to-br from-[#9AD0C2] to-[#2D9596] rounded-2xl flex items-center justify-center text-2xl">
-                              {app.companyLogo}
-                            </div>
-                          </div>
-
-                          {/* Main Info */}
-                          <div className="flex-1">
-                            {/* Header Row */}
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <h3
-                                  className="text-[#265073] text-xl mb-2 hover:text-[#2D9596] cursor-pointer transition-colors"
-                                  onClick={() => onJobClick?.(app.jobId)}
-                                >
-                                  {app.jobTitle}
-                                </h3>
-                                <div className="flex items-center gap-4 text-sm mb-2">
-                                  <div className="flex items-center gap-2 text-[#2D9596]">
-                                    <Building2 className="w-4 h-4" />
-                                    <span>{app.company}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-[#265073]">
-                                    <MapPin className="w-4 h-4" />
-                                    <span>{app.location}</span>
-                                  </div>
-                                  <div className="px-3 py-1 bg-[#2D9596] text-white rounded-full text-xs">
-                                    {app.salary}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-[#265073]/60">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>Ứng tuyển ngày: {app.appliedDate}</span>
-                                </div>
-                              </div>
-
-                              {/* Status Badge */}
-                              <div className="flex-shrink-0 ml-4">
-                                <div
-                                  className={`px-4 py-2 rounded-full flex items-center gap-2 ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border || ""}`}
-                                >
-                                  <StatusIcon className="w-4 h-4" />
-                                  <span className="text-sm">{app.statusText}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Additional Info Based on Status */}
-                            {app.status === "interview" && app.interviewDate && (
-                              <div className="mb-3 p-3 bg-[#1EAD7B]/10 border border-[#1EAD7B]/30 rounded-lg">
-                                <div className="flex items-center gap-2 text-[#1EAD7B]">
-                                  <Video className="w-4 h-4" />
-                                  <span className="text-sm">
-                                    Lịch phỏng vấn: {app.interviewDate}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            {app.status === "rejected" && app.rejectReason && (
-                              <div className="mb-3 p-3 bg-[#F8D7DA] border border-[#C9302C]/30 rounded-lg">
-                                <p className="text-[#C9302C] text-sm">
-                                  {app.rejectReason}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => onApplicationClick?.(app.id)}
-                                className="px-5 py-2 border-2 border-[#2D9596] text-[#2D9596] rounded-lg hover:bg-[#ECF4D6] transition-colors text-sm flex items-center gap-2"
-                              >
-                                <Eye className="w-4 h-4" />
-                                Xem chi tiết đơn
-                              </button>
-
-                              {(app.status === "pending" ||
-                                app.status === "viewed") && (
-                                <button className="px-5 py-2 border-2 border-[#C9302C] text-[#C9302C] rounded-lg hover:bg-[#F8D7DA] transition-colors text-sm flex items-center gap-2">
-                                  <X className="w-4 h-4" />
-                                  Rút đơn
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                {/* PAGINATION */}
-                {filteredApplications.length > 5 && (
-                  <div className="mt-8 flex justify-center items-center gap-2">
-                    <button className="px-4 py-2 border-2 border-[#265073] text-[#265073] rounded-lg hover:bg-[#ECF4D6] transition-colors">
-                      ← Trước
-                    </button>
-                    {[1, 2, 3].map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
-                          currentPage === page
-                            ? "bg-[#2D9596] text-white"
-                            : "border-2 border-[#265073] text-[#265073] hover:bg-[#ECF4D6]"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                    <button className="px-4 py-2 border-2 border-[#265073] text-[#265073] rounded-lg hover:bg-[#ECF4D6] transition-colors">
-                      Sau →
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="px-4 py-2 border-2 border-[#9AD0C2] rounded-lg focus:border-[#2D9596] outline-none text-[#265073]"
+                    >
+                      <option value="all">Tất cả trạng thái</option>
+                      <option value="pending">Chờ duyệt</option>
+                      <option value="reviewed">Đã xem CV</option>
+                      <option value="interview">Mời phỏng vấn</option>
+                      <option value="accepted">Được nhận</option>
+                      <option value="rejected">Từ chối</option>
+                    </select>
+                    <button
+                      onClick={() => setSelectedStatus("all")}
+                      className="px-4 py-2 text-[#2D9596] hover:text-[#265073]"
+                    >
+                      Xóa lọc
                     </button>
                   </div>
                 )}
-              </>
-            ) : (
-              /* EMPTY STATE */
+              </motion.div>
+            )}
+
+            {/* Applications List */}
+            {applications.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-white rounded-2xl border-2 border-[#9AD0C2] p-12 text-center shadow-sm"
+                className="bg-white rounded-xl border-2 border-[#9AD0C2] p-12 text-center"
               >
-                <div className="w-24 h-24 bg-[#ECF4D6] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <ClipboardCheck className="w-12 h-12 text-[#2D9596]" />
+                <div className="w-20 h-20 bg-[#ECF4D6] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ClipboardCheck className="w-10 h-10 text-[#2D9596]" />
                 </div>
-                <h3 className="text-[#265073] text-2xl mb-3">
+                <h3 className="text-[#265073] text-xl font-semibold mb-2">
                   Bạn chưa ứng tuyển công việc nào
                 </h3>
-                <p className="text-[#265073]/70 mb-6 max-w-md mx-auto">
-                  Hãy khám phá hàng nghìn cơ hội việc làm IT tuyệt vời đang chờ
-                  bạn
+                <p className="text-[#2D9596] mb-4">
+                  Hãy khám phá các cơ hội việc làm IT tuyệt vời đang chờ bạn
                 </p>
-                <button className="px-8 py-3 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors inline-flex items-center gap-2">
+                <a
+                  href="/jobs"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors"
+                >
                   <Sparkles className="w-5 h-5" />
-                  Khám phá việc làm ngay
-                </button>
+                  Khám phá việc làm
+                </a>
               </motion.div>
+            ) : (
+              <div className="space-y-4">
+                {filteredApplications.map((app, index) => {
+                  const statusConfig = getStatusConfig(app.status);
+                  const StatusIcon = statusConfig.icon;
+
+                  return (
+                    <motion.div
+                      key={app.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-white rounded-xl border-2 border-[#9AD0C2] p-5 hover:shadow-lg hover:border-[#2D9596] transition-all"
+                    >
+                      <div className="flex gap-4">
+                        {/* Company Logo */}
+                        <div className="w-14 h-14 bg-gradient-to-br from-[#9AD0C2] to-[#2D9596] rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-7 h-7 text-white" />
+                        </div>
+
+                        {/* Main Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <a
+                              href={`/job/${app.jobId}`}
+                              className="text-[#265073] text-lg font-semibold hover:text-[#2D9596] transition-colors"
+                            >
+                              {app.jobInfo?.title || "Vị trí công việc"}
+                            </a>
+                            <div
+                              className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 ${statusConfig.bg} ${statusConfig.text}`}
+                            >
+                              <StatusIcon className="w-4 h-4" />
+                              <span className="text-sm">{statusConfig.label}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-4 text-sm mb-3">
+                            <div className="flex items-center gap-1.5 text-[#2D9596]">
+                              <Building2 className="w-4 h-4" />
+                              <span>{app.jobInfo?.company || "Công ty"}</span>
+                            </div>
+                            {app.jobInfo?.location && (
+                              <div className="flex items-center gap-1.5 text-[#265073]/70">
+                                <MapPin className="w-4 h-4" />
+                                <span>{app.jobInfo.location}</span>
+                              </div>
+                            )}
+                            {app.jobInfo?.salary && (
+                              <div className="px-2 py-0.5 bg-[#2D9596] text-white rounded-full text-xs">
+                                {formatSalary(app.jobInfo.salary)}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-sm text-[#265073]/60 mb-3">
+                            <Calendar className="w-4 h-4" />
+                            <span>Ứng tuyển ngày: {formatDate(app.appliedAt)}</span>
+                          </div>
+
+                          {/* Interview Info */}
+                          {app.status === "interview" && (
+                            <div className="mb-3 p-3 bg-[#D1FAE5] border border-[#10B981]/30 rounded-lg">
+                              <div className="flex items-center gap-2 text-[#10B981]">
+                                <Video className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                  Bạn đã được mời phỏng vấn! Kiểm tra email để biết thêm chi tiết.
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Accepted Info */}
+                          {app.status === "accepted" && (
+                            <div className="mb-3 p-3 bg-[#DCFCE7] border border-[#22C55E]/30 rounded-lg">
+                              <div className="flex items-center gap-2 text-[#22C55E]">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span className="text-sm font-medium">
+                                  Chúc mừng! Bạn đã được nhận vào vị trí này.
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            <a
+                              href={`/job/${app.jobId}`}
+                              className="px-4 py-2 border border-[#2D9596] text-[#2D9596] rounded-lg hover:bg-[#ECF4D6] transition-colors text-sm flex items-center gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Xem chi tiết
+                            </a>
+                            {app.cvUrl && (
+                              <a
+                                href={app.cvUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 text-[#265073]/70 hover:text-[#2D9596] transition-colors text-sm flex items-center gap-2"
+                              >
+                                <FileText className="w-4 h-4" />
+                                Xem CV đã gửi
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          {/* ========== SIDEBAR ========== */}
-          {hasApplications && (
-            <div className="hidden lg:block w-80 space-y-6">
-              {/* Statistics Card */}
+          {/* Sidebar */}
+          {applications.length > 0 && (
+            <div className="hidden lg:block w-72 space-y-4">
+              {/* Stats Card */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-white rounded-2xl border-2 border-[#9AD0C2] p-6 shadow-sm"
+                className="bg-white rounded-xl border-2 border-[#9AD0C2] p-5"
               >
-                <h3 className="text-[#265073] mb-4 flex items-center gap-2">
+                <h3 className="text-[#265073] font-semibold mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-[#2D9596]" />
                   Thống kê ứng tuyển
                 </h3>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-[#ECF4D6] rounded-xl">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 bg-[#ECF4D6] rounded-lg">
                     <span className="text-[#265073] text-sm">Tổng số đơn</span>
-                    <span className="text-[#2D9596] text-lg">
-                      {stats.total}
-                    </span>
+                    <span className="text-[#2D9596] font-bold text-lg">{stats.total}</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-[#9AD0C2]/20 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#265073]" />
-                      <span className="text-[#265073] text-sm">Chờ duyệt</span>
-                    </div>
-                    <span className="text-[#265073]">{stats.pending}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-[#2D9596]/10 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-[#2D9596]" />
-                      <span className="text-[#265073] text-sm">Đã xem CV</span>
-                    </div>
-                    <span className="text-[#2D9596]">{stats.viewed}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-[#2D9596]/10 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-[#2D9596]" />
-                      <span className="text-[#265073] text-sm">
-                        Đang xem xét
-                      </span>
-                    </div>
-                    <span className="text-[#2D9596]">{stats.reviewing}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-[#1EAD7B]/10 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <Video className="w-4 h-4 text-[#1EAD7B]" />
-                      <span className="text-[#265073] text-sm">
-                        Mời phỏng vấn
-                      </span>
-                    </div>
-                    <span className="text-[#1EAD7B]">{stats.interview}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-[#F8D7DA] rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <XCircle className="w-4 h-4 text-[#C9302C]" />
-                      <span className="text-[#265073] text-sm">Từ chối</span>
-                    </div>
-                    <span className="text-[#C9302C]">{stats.rejected}</span>
-                  </div>
+                  {[
+                    { key: "pending", label: "Chờ duyệt", icon: Clock, color: "#F59E0B", bg: "#FEF3C7" },
+                    { key: "reviewed", label: "Đã xem CV", icon: Eye, color: "#3B82F6", bg: "#DBEAFE" },
+                    { key: "interview", label: "Mời phỏng vấn", icon: Video, color: "#10B981", bg: "#D1FAE5" },
+                    { key: "accepted", label: "Được nhận", icon: CheckCircle2, color: "#22C55E", bg: "#DCFCE7" },
+                    { key: "rejected", label: "Từ chối", icon: XCircle, color: "#EF4444", bg: "#FEE2E2" },
+                  ].map((item) => {
+                    const count = stats[item.key as keyof typeof stats];
+                    return (
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between p-3 rounded-lg"
+                        style={{ backgroundColor: item.bg }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                          <span className="text-[#265073] text-sm">{item.label}</span>
+                        </div>
+                        <span style={{ color: item.color }} className="font-semibold">
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
 
-              {/* Suggested Jobs Card */}
+              {/* Quick Actions */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-gradient-to-br from-[#9AD0C2]/30 to-[#ECF4D6] rounded-2xl border-2 border-[#9AD0C2] p-6 shadow-sm"
+                className="bg-white rounded-xl border-2 border-[#9AD0C2] p-5"
               >
-                <h3 className="text-[#265073] mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[#2D9596]" />
-                  Việc làm liên quan
-                </h3>
-
-                <div className="space-y-3">
-                  {suggestedJobs.map((job, idx) => (
-                    <div
-                      key={job.id}
-                      className="p-4 bg-white rounded-xl border border-[#9AD0C2]/50 hover:border-[#2D9596] transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="text-[#265073] text-sm flex-1">
-                          {job.title}
-                        </h4>
-                        <span className="px-2 py-1 bg-[#2D9596] text-white text-xs rounded-full ml-2">
-                          {job.matchScore}%
-                        </span>
-                      </div>
-                      <p className="text-[#2D9596] text-xs mb-2">
-                        {job.company}
-                      </p>
-                      <p className="text-[#265073] text-xs">{job.salary}</p>
-                    </div>
-                  ))}
+                <h3 className="text-[#265073] font-semibold mb-4">Hành động nhanh</h3>
+                <div className="space-y-2">
+                  <a
+                    href="/jobs"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#ECF4D6] transition-colors"
+                  >
+                    <Briefcase className="w-5 h-5 text-[#2D9596]" />
+                    <span className="text-[#265073]">Tìm việc mới</span>
+                  </a>
+                  <a
+                    href="/candidate/saved-jobs"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#ECF4D6] transition-colors"
+                  >
+                    <FileText className="w-5 h-5 text-[#2D9596]" />
+                    <span className="text-[#265073]">Việc đã lưu</span>
+                  </a>
+                  <a
+                    href="/candidate/dashboard"
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#ECF4D6] transition-colors"
+                  >
+                    <TrendingUp className="w-5 h-5 text-[#2D9596]" />
+                    <span className="text-[#265073]">Dashboard</span>
+                  </a>
                 </div>
-
-                <button className="w-full mt-4 px-4 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors text-sm">
-                  Xem tất cả gợi ý →
-                </button>
               </motion.div>
             </div>
           )}
@@ -627,4 +428,3 @@ export function ApplicationsPage({ onJobClick, onApplicationClick }: Application
     </div>
   );
 }
-

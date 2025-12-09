@@ -3,16 +3,16 @@
 import { useParams } from "next/navigation";
 import { Header } from "../../components/Header";
 import { Footer } from "../../components/Footer";
-import { JobDetailPage as JobDetailComponent } from "../../components/job-detail/JobDetailPage";
+import { JobDetailPagePublic } from "../../components/jobs/JobDetailPagePublic";
 
 export default function JobDetail() {
   const params = useParams();
-  const jobId = params.id ? parseInt(params.id as string) : null;
+  const jobId = params.id as string;
 
   return (
     <>
       <Header />
-      <JobDetailComponent jobId={jobId} />
+      <JobDetailPagePublic jobId={jobId} />
       <Footer />
     </>
   );

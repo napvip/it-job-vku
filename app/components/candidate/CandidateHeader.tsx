@@ -38,15 +38,12 @@ export function CandidateHeader() {
     if (pathname === "/candidate/dashboard") return "dashboard";
     if (pathname === "/candidate/profile") return "profile";
     if (pathname === "/candidate/ai-recommendations") return "recommendations";
-    if (pathname === "/candidate/ai-interview") return "ai-interview";
     if (pathname === "/candidate/submit-cv-with-ai") return "submit-cv-with-ai";
     if (pathname === "/candidate/applications") return "applications";
-    if (pathname === "/candidate/interviews") return "interviews";
     if (pathname === "/candidate/messages") return "messages";
     if (pathname === "/candidate/saved-jobs") return "saved-jobs";
     if (pathname === "/candidate/following-companies") return "following-companies";
     if (pathname === "/candidate/settings") return "settings";
-    if (pathname === "/candidate/career-path") return "career-path";
     if (pathname === "/jobs") return "jobs";
     if (pathname === "/companies") return "companies";
     return "dashboard";
@@ -68,15 +65,7 @@ export function CandidateHeader() {
       unread: true,
       icon: Eye,
     },
-    {
-      id: 2,
-      type: "interview",
-      title: "Lịch phỏng vấn mới",
-      message: "Bạn có lịch phỏng vấn với FPT Software vào 14:00 ngày mai",
-      time: "1 giờ trước",
-      unread: true,
-      icon: Calendar,
-    },
+
     {
       id: 3,
       type: "match",
@@ -214,22 +203,6 @@ export function CandidateHeader() {
               >
                 <Search className="w-4 h-4" />
                 <span>Việc làm</span>
-              </button>
-
-              {/* Phỏng vấn AI */}
-              <button
-                className={`px-5 py-2.5 rounded-lg transition-all duration-300 flex items-center gap-2 relative ${
-                  currentPage === "ai-interview"
-                    ? "bg-[#2D9596] text-white shadow-md"
-                    : "text-white hover:bg-white/10 hover:text-[#9AD0C2]"
-                }`}
-                onClick={() => router.push("/candidate/ai-interview")}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Phỏng vấn AI</span>
-                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#2D9596] text-white text-[9px] rounded-full border border-white/30">
-                  AI
-                </span>
               </button>
 
               {/* Công ty */}
@@ -582,17 +555,6 @@ export function CandidateHeader() {
                         <button
                           onClick={() => {
                             setIsProfileMenuOpen(false);
-                            router.push("/candidate/interviews");
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
-                        >
-                          <Calendar className="w-5 h-5 group-hover:text-[#2D9596] transition-colors" />
-                          <span className="text-sm">Lịch phỏng vấn</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setIsProfileMenuOpen(false);
                             router.push("/candidate/messages");
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
@@ -641,17 +603,6 @@ export function CandidateHeader() {
                           <span className="text-sm">Cài đặt tài khoản</span>
                         </button>
 
-                        <button
-                          onClick={() => {
-                            setIsProfileMenuOpen(false);
-                            router.push("/candidate/career-path");
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#ECF4D6] transition-all duration-300 text-[#265073] group"
-                        >
-                          <Sparkles className="w-5 h-5 group-hover:text-[#2D9596] transition-colors" />
-                          <span className="text-sm">Định hướng nghề nghiệp</span>
-                        </button>
-
                         <div className="border-t-2 border-[#9AD0C2] my-2" />
 
                         <button
@@ -696,18 +647,6 @@ export function CandidateHeader() {
             >
               <Search className="w-5 h-5" />
               <span className="text-[10px]">Việc làm</span>
-            </button>
-
-            <button
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-300 relative ${
-                currentPage === "ai-interview"
-                  ? "text-[#9AD0C2]"
-                  : "text-white/70"
-              }`}
-              onClick={() => router.push("/candidate/ai-interview")}
-            >
-              <Sparkles className="w-5 h-5" />
-              <span className="text-[10px]">AI</span>
             </button>
 
             <button

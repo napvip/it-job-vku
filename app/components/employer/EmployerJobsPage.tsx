@@ -1,26 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Search,
   MapPin,
   DollarSign,
   Users,
-  Eye,
   Edit,
   Pause,
   XCircle,
-  Gauge,
   Calendar,
   Briefcase,
   TrendingUp,
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Play,
+  FileText,
+  Tag,
+  X,
+  Check,
+  Target,
+  ChevronDown,
 } from "lucide-react";
+import { getCompanyJobs, updateJob, deleteJob, auth, JobData, createJob } from "../../../lib/firebase";
 
 export function EmployerJobsPage() {
   const router = useRouter();
@@ -30,108 +37,162 @@ export function EmployerJobsPage() {
   const [levelFilter, setLevelFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [jobs, setJobs] = useState<JobData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock jobs data
-  const jobs = [
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      skills: ["ReactJS", "TypeScript", "NextJS"],
-      location: "Hà Nội",
-      salary: "25-35 triệu",
-      status: "active",
-      statusText: "Đang tuyển",
-      applicants: 24,
-      views: 342,
-      matchScore: 82,
-      postedDate: "15/11/2024",
-      type: "Hybrid",
-      level: "Senior",
-    },
-    {
-      id: 2,
-      title: "Backend Developer (NodeJS)",
-      skills: ["NodeJS", "MongoDB", "AWS"],
-      location: "TP.HCM",
-      salary: "20-30 triệu",
-      status: "active",
-      statusText: "Đang tuyển",
-      applicants: 18,
-      views: 278,
-      matchScore: 75,
-      postedDate: "12/11/2024",
-      type: "Remote",
-      level: "Middle",
-    },
-    {
-      id: 3,
-      title: "UI/UX Designer",
-      skills: ["Figma", "Adobe XD", "Sketch"],
-      location: "Đà Nẵng",
-      salary: "15-25 triệu",
-      status: "active",
-      statusText: "Đang tuyển",
-      applicants: 31,
-      views: 412,
-      matchScore: 88,
-      postedDate: "18/11/2024",
-      type: "Onsite",
-      level: "Junior",
-    },
-    {
-      id: 4,
-      title: "Full-stack Developer",
-      skills: ["React", "NodeJS", "PostgreSQL"],
-      location: "Hà Nội",
-      salary: "30-40 triệu",
-      status: "paused",
-      statusText: "Tạm dừng",
-      applicants: 45,
-      views: 567,
-      matchScore: 79,
-      postedDate: "08/11/2024",
-      type: "Hybrid",
-      level: "Senior",
-    },
-    {
-      id: 5,
-      title: "Mobile Developer (React Native)",
-      skills: ["React Native", "JavaScript", "Firebase"],
-      location: "Remote",
-      salary: "22-32 triệu",
-      status: "closed",
-      statusText: "Đã đóng",
-      applicants: 38,
-      views: 489,
-      matchScore: 84,
-      postedDate: "02/11/2024",
-      type: "Remote",
-      level: "Middle",
-    },
-    {
-      id: 6,
-      title: "DevOps Engineer",
-      skills: ["Docker", "Kubernetes", "CI/CD"],
-      location: "Hà Nội",
-      salary: "28-38 triệu",
-      status: "active",
-      statusText: "Đang tuyển",
-      applicants: 15,
-      views: 234,
-      matchScore: 76,
-      postedDate: "20/11/2024",
-      type: "Onsite",
-      level: "Senior",
-    },
-  ];
+  // Form states for create job modal
+  const [jobTitle, setJobTitle] = useState("");
+  const [level, setLevel] = useState("middle");
+  const [workType, setWorkType] = useState<"onsite" | "hybrid" | "remote">("onsite");
+  const [location, setLocation] = useState("");
+  const [salaryMin, setSalaryMin] = useState("");
+  const [salaryMax, setSalaryMax] = useState("");
+  const [hideSalary, setHideSalary] = useState(false);
+  const [description, setDescription] = useState("");
+  const [requirements, setRequirements] = useState("");
+  const [benefits, setBenefits] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [deadline, setDeadline] = useState("");
+  const [contractType, setContractType] = useState("full-time");
+  const [education, setEducation] = useState("bachelor");
+
+  // Load jobs from Firebase
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        loadJobs(user.uid);
+      } else {
+        setIsAuthenticated(false);
+        setLoading(false);
+        router.push("/login");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const loadJobs = async (userId: string) => {
+    try {
+      setLoading(true);
+      const fetchedJobs = await getCompanyJobs(userId);
+      setJobs(fetchedJobs);
+    } catch (error) {
+      console.error("Error loading jobs:", error);
+      alert("Có lỗi xảy ra khi tải danh sách công việc!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePauseJob = async (jobId: string) => {
+    try {
+      await updateJob(jobId, { status: "paused" });
+      // Reload jobs
+      if (auth.currentUser) {
+        await loadJobs(auth.currentUser.uid);
+      }
+    } catch (error) {
+      console.error("Error pausing job:", error);
+      alert("Có lỗi xảy ra khi tạm dừng tin tuyển dụng!");
+    }
+  };
+
+  const handleResumeJob = async (jobId: string) => {
+    try {
+      await updateJob(jobId, { status: "active" });
+      // Reload jobs
+      if (auth.currentUser) {
+        await loadJobs(auth.currentUser.uid);
+      }
+    } catch (error) {
+      console.error("Error resuming job:", error);
+      alert("Có lỗi xảy ra khi tiếp tục tin tuyển dụng!");
+    }
+  };
+
+  const handleCloseJob = async (jobId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn đóng tin tuyển dụng này?")) {
+      return;
+    }
+
+    try {
+      await updateJob(jobId, { status: "closed" });
+      // Reload jobs
+      if (auth.currentUser) {
+        await loadJobs(auth.currentUser.uid);
+      }
+    } catch (error) {
+      console.error("Error closing job:", error);
+      alert("Có lỗi xảy ra khi đóng tin tuyển dụng!");
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa tin tuyển dụng này? Hành động này không thể hoàn tác!")) {
+      return;
+    }
+
+    try {
+      await deleteJob(jobId);
+      // Reload jobs
+      if (auth.currentUser) {
+        await loadJobs(auth.currentUser.uid);
+      }
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      alert("Có lỗi xảy ra khi xóa tin tuyển dụng!");
+    }
+  };
+
+  // Filter jobs based on filters
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((job) => {
+      // Search filter
+      if (searchQuery && !job.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Status filter
+      if (statusFilter !== "all" && job.status !== statusFilter) {
+        return false;
+      }
+
+      // Location filter
+      if (locationFilter !== "all") {
+        const normalizedLocation = job.location.toLowerCase();
+        if (locationFilter === "hanoi" && !normalizedLocation.includes("hà nội")) return false;
+        if (locationFilter === "hcm" && !normalizedLocation.includes("tp.hcm") && !normalizedLocation.includes("hồ chí minh")) return false;
+        if (locationFilter === "danang" && !normalizedLocation.includes("đà nẵng")) return false;
+        if (locationFilter === "remote" && !normalizedLocation.includes("remote")) return false;
+      }
+
+      // Level filter
+      if (levelFilter !== "all" && job.level.toLowerCase() !== levelFilter.toLowerCase()) {
+        return false;
+      }
+
+      // Type filter
+      if (typeFilter !== "all" && job.workType.toLowerCase() !== typeFilter.toLowerCase()) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [jobs, searchQuery, statusFilter, locationFilter, levelFilter, typeFilter]);
 
   // Stats
-  const stats = {
-    total: jobs.length,
-    active: jobs.filter((j) => j.status === "active").length,
-    closed: jobs.filter((j) => j.status === "closed").length,
-    mostApplicants: Math.max(...jobs.map((j) => j.applicants)),
-  };
+  const stats = useMemo(() => ({
+    total: filteredJobs.length,
+    active: filteredJobs.filter((j) => j.status === "active").length,
+    closed: filteredJobs.filter((j) => j.status === "closed").length,
+    mostApplicants: filteredJobs.length > 0 ? Math.max(...filteredJobs.map((j) => j.applicants || 0)) : 0,
+  }), [filteredJobs]);
 
   // AI Suggestions
   const aiSuggestions = [
@@ -166,9 +227,50 @@ export function EmployerJobsPage() {
         return "bg-[#FFB84D] text-white";
       case "closed":
         return "bg-gray-400 text-white";
+      case "draft":
+        return "bg-gray-300 text-gray-700";
       default:
         return "bg-gray-200 text-gray-700";
     }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "active":
+        return "Đang tuyển";
+      case "paused":
+        return "Tạm dừng";
+      case "closed":
+        return "Đã đóng";
+      case "draft":
+        return "Nháp";
+      default:
+        return status;
+    }
+  };
+
+  const formatSalary = (job: JobData) => {
+    if (job.hideSalary) {
+      return "Thỏa thuận";
+    }
+    if (job.salaryMin && job.salaryMax) {
+      return `${job.salaryMin}-${job.salaryMax} triệu`;
+    }
+    if (job.salaryMin) {
+      return `Từ ${job.salaryMin} triệu`;
+    }
+    if (job.salaryMax) {
+      return `Tối đa ${job.salaryMax} triệu`;
+    }
+    return "Thỏa thuận";
+  };
+
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(date));
   };
 
   const handleClearFilters = () => {
@@ -177,6 +279,98 @@ export function EmployerJobsPage() {
     setLocationFilter("all");
     setLevelFilter("all");
     setTypeFilter("all");
+  };
+
+  const handleAddSkill = (skill: string) => {
+    if (skill && !skills.includes(skill)) {
+      setSkills([...skills, skill]);
+    }
+  };
+
+  const handleRemoveSkill = (skillToRemove: string) => {
+    setSkills(skills.filter((s) => s !== skillToRemove));
+  };
+
+  const handleSkillInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && skillInput.trim()) {
+      e.preventDefault();
+      handleAddSkill(skillInput.trim());
+      setSkillInput("");
+    }
+  };
+
+  const resetForm = () => {
+    setJobTitle("");
+    setLevel("middle");
+    setWorkType("onsite");
+    setLocation("");
+    setSalaryMin("");
+    setSalaryMax("");
+    setHideSalary(false);
+    setDescription("");
+    setRequirements("");
+    setBenefits("");
+    setSkills([]);
+    setSkillInput("");
+    setQuantity("1");
+    setDeadline("");
+    setContractType("full-time");
+    setEducation("bachelor");
+  };
+
+  const handleCreateJob = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!jobTitle || !location || !description || !requirements || !benefits || !deadline) {
+      alert("Vui lòng điền đầy đủ các trường bắt buộc!");
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Bạn cần đăng nhập để đăng tin tuyển dụng!");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const jobData = {
+        companyId: currentUser.uid,
+        title: jobTitle,
+        level,
+        workType,
+        location,
+        salaryMin: salaryMin ? parseFloat(salaryMin) : undefined,
+        salaryMax: salaryMax ? parseFloat(salaryMax) : undefined,
+        hideSalary,
+        description,
+        requirements,
+        benefits,
+        skills,
+        quantity: parseInt(quantity),
+        deadline,
+        contractType,
+        education,
+        status: "active" as const,
+        quickApply: true,
+      };
+
+      await createJob(jobData);
+      alert("Đăng tin tuyển dụng thành công!");
+      setShowCreateModal(false);
+      resetForm();
+      
+      // Reload jobs
+      if (auth.currentUser) {
+        await loadJobs(auth.currentUser.uid);
+      }
+    } catch (error) {
+      console.error("Error creating job:", error);
+      alert("Có lỗi xảy ra khi đăng tin tuyển dụng. Vui lòng thử lại!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -198,7 +392,7 @@ export function EmployerJobsPage() {
               </p>
             </div>
             <button
-              onClick={() => router.push("/employer/jobs/create")}
+              onClick={() => setShowCreateModal(true)}
               className="px-6 py-3 bg-[#2D9596] text-white rounded-xl hover:bg-[#265073] transition-colors flex items-center gap-2 shadow-lg hover:shadow-xl"
             >
               <Plus className="w-5 h-5" />
@@ -322,7 +516,17 @@ export function EmployerJobsPage() {
             </motion.div>
 
             {/* Jobs List */}
-            {jobs.length === 0 ? (
+            {loading ? (
+              // Loading State
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl p-12 border-2 border-[#9AD0C2] text-center"
+              >
+                <div className="w-16 h-16 border-4 border-[#2D9596] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-[#265073]">Đang tải danh sách tin tuyển dụng...</p>
+              </motion.div>
+            ) : filteredJobs.length === 0 ? (
               // Empty State
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -348,7 +552,7 @@ export function EmployerJobsPage() {
               </motion.div>
             ) : (
               <div className="space-y-4">
-                {jobs.map((job, index) => (
+                {filteredJobs.map((job, index) => (
                   <motion.div
                     key={job.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -381,7 +585,7 @@ export function EmployerJobsPage() {
                           <span
                             className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${getStatusColor(job.status)}`}
                           >
-                            {job.statusText}
+                            {getStatusText(job.status)}
                           </span>
                         </div>
 
@@ -393,19 +597,19 @@ export function EmployerJobsPage() {
                           <div className="flex items-center gap-2">
                             <span className="px-3 py-1 bg-[#2D9596] text-white rounded-full text-sm">
                               <DollarSign className="w-3 h-3 inline mr-1" />
-                              {job.salary}
+                              {formatSalary(job)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-[#265073] text-sm">
                             <Calendar className="w-4 h-4 text-[#2D9596]" />
-                            Đăng: {job.postedDate}
+                            Đăng: {formatDate(job.createdAt)}
                           </div>
                           <div className="text-sm text-[#265073]">
                             <span className="px-2 py-1 bg-[#ECF4D6] rounded">
-                              {job.type}
+                              {job.workType === "onsite" ? "Onsite" : job.workType === "hybrid" ? "Hybrid" : "Remote"}
                             </span>
                             <span className="mx-2">•</span>
-                            <span className="px-2 py-1 bg-[#ECF4D6] rounded">
+                            <span className="px-2 py-1 bg-[#ECF4D6] rounded capitalize">
                               {job.level}
                             </span>
                           </div>
@@ -414,40 +618,16 @@ export function EmployerJobsPage() {
 
                       {/* Right Column - Stats */}
                       <div className="flex flex-col justify-between">
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="p-3 bg-[#ECF4D6] rounded-xl text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Users className="w-4 h-4 text-[#2D9596]" />
+                        <div className="flex justify-center items-center h-full">
+                          <div className="p-6 bg-gradient-to-br from-[#2D9596]/10 to-[#265073]/10 rounded-xl text-center w-full">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <Users className="w-5 h-5 text-[#2D9596]" />
                             </div>
-                            <div className="text-xl text-[#265073]">
-                              {job.applicants}
+                            <div className="text-3xl text-[#265073] font-semibold mb-1">
+                              {job.applicants || 0}
                             </div>
-                            <div className="text-xs text-[#265073]/70">
-                              Ứng viên
-                            </div>
-                          </div>
-
-                          <div className="p-3 bg-[#ECF4D6] rounded-xl text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Eye className="w-4 h-4 text-[#2D9596]" />
-                            </div>
-                            <div className="text-xl text-[#265073]">
-                              {job.views}
-                            </div>
-                            <div className="text-xs text-[#265073]/70">
-                              Lượt xem
-                            </div>
-                          </div>
-
-                          <div className="col-span-2 p-3 bg-gradient-to-br from-[#2D9596]/10 to-[#265073]/10 rounded-xl text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Gauge className="w-4 h-4 text-[#2D9596]" />
-                              <span className="text-sm text-[#265073]/70">
-                                Match Score TB
-                              </span>
-                            </div>
-                            <div className="text-2xl text-[#2D9596]">
-                              {job.matchScore}%
+                            <div className="text-sm text-[#265073]/70">
+                              Ứng viên đã ứng tuyển
                             </div>
                           </div>
                         </div>
@@ -464,11 +644,11 @@ export function EmployerJobsPage() {
                         Xem chi tiết
                       </button>
                       <button
-                        onClick={() => router.push(`/employer/applicants/${job.id}`)}
+                        onClick={() => router.push(`/employer/applicant/${job.id}`)}
                         className="flex-1 min-w-[140px] px-4 py-2 bg-[#265073] text-white rounded-lg hover:bg-[#2D9596] transition-colors flex items-center justify-center gap-2"
                       >
                         <Users className="w-4 h-4" />
-                        Xem ứng viên
+                        Xem ứng viên ({job.applicants || 0})
                       </button>
                       <button
                         onClick={() => router.push(`/employer/jobs/edit/${job.id}`)}
@@ -478,16 +658,29 @@ export function EmployerJobsPage() {
                         Chỉnh sửa
                       </button>
                       {job.status === "active" ? (
-                        <button className="px-4 py-2 border-2 border-[#FFB84D] text-[#FFB84D] rounded-lg hover:bg-[#FFB84D] hover:text-white transition-colors flex items-center gap-2">
+                        <button 
+                          onClick={() => job.id && handlePauseJob(job.id)}
+                          className="px-4 py-2 border-2 border-[#FFB84D] text-[#FFB84D] rounded-lg hover:bg-[#FFB84D] hover:text-white transition-colors flex items-center gap-2"
+                        >
                           <Pause className="w-4 h-4" />
                           Tạm dừng
                         </button>
-                      ) : (
-                        <button className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors flex items-center gap-2">
-                          <XCircle className="w-4 h-4" />
-                          Đóng tin
+                      ) : job.status === "paused" ? (
+                        <button 
+                          onClick={() => job.id && handleResumeJob(job.id)}
+                          className="px-4 py-2 border-2 border-green-500 text-green-500 rounded-lg hover:bg-green-500 hover:text-white transition-colors flex items-center gap-2"
+                        >
+                          <Play className="w-4 h-4" />
+                          Tiếp tục
                         </button>
-                      )}
+                      ) : null}
+                      <button 
+                        onClick={() => job.id && handleCloseJob(job.id)}
+                        className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors flex items-center gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Đóng tin
+                      </button>
                     </div>
                   </motion.div>
                 ))}
@@ -495,7 +688,7 @@ export function EmployerJobsPage() {
             )}
 
             {/* Pagination */}
-            {jobs.length > 0 && (
+            {filteredJobs.length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -618,6 +811,274 @@ export function EmployerJobsPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Job Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => !isSubmitting && setShowCreateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-8 max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-[#265073] text-2xl flex items-center gap-2">
+                  <Briefcase className="w-6 h-6 text-[#2D9596]" />
+                  Đăng tin tuyển dụng mới
+                </h2>
+                <button
+                  onClick={() => !isSubmitting && setShowCreateModal(false)}
+                  className="text-[#265073] hover:text-[#2D9596] transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateJob} className="space-y-6">
+                {/* Basic Info */}
+                <div className="space-y-4">
+                  <h3 className="text-[#265073] flex items-center gap-2">
+                    <Briefcase className="w-5 h-5 text-[#2D9596]" />
+                    Thông tin cơ bản
+                  </h3>
+
+                  <div>
+                    <label className="block text-[#265073] mb-2">
+                      Tên vị trí tuyển dụng *
+                    </label>
+                    <input
+                      type="text"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      placeholder="Ví dụ: Frontend Developer (ReactJS)"
+                      className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[#265073] mb-2">Cấp bậc *</label>
+                      <select
+                        value={level}
+                        onChange={(e) => setLevel(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      >
+                        <option value="intern">Intern</option>
+                        <option value="fresher">Fresher</option>
+                        <option value="junior">Junior</option>
+                        <option value="middle">Middle</option>
+                        <option value="senior">Senior</option>
+                        <option value="leader">Leader</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[#265073] mb-2">Hình thức *</label>
+                      <select
+                        value={workType}
+                        onChange={(e) => setWorkType(e.target.value as "onsite" | "hybrid" | "remote")}
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      >
+                        <option value="onsite">Onsite</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="remote">Remote</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[#265073] mb-2">Địa điểm *</label>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Hà Nội / Đà Nẵng / TP.HCM"
+                      className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[#265073] mb-2">Mức lương (triệu VNĐ)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <input
+                        type="number"
+                        value={salaryMin}
+                        onChange={(e) => setSalaryMin(e.target.value)}
+                        placeholder="Tối thiểu"
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      />
+                      <input
+                        type="number"
+                        value={salaryMax}
+                        onChange={(e) => setSalaryMax(e.target.value)}
+                        placeholder="Tối đa"
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Description */}
+                <div className="space-y-4">
+                  <h3 className="text-[#265073] flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-[#2D9596]" />
+                    Mô tả công việc
+                  </h3>
+
+                  <div>
+                    <label className="block text-[#265073] mb-2">Mô tả chi tiết *</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Mô tả công việc..."
+                      rows={4}
+                      className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[#265073] mb-2">Yêu cầu *</label>
+                    <textarea
+                      value={requirements}
+                      onChange={(e) => setRequirements(e.target.value)}
+                      placeholder="Yêu cầu công việc..."
+                      rows={4}
+                      className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[#265073] mb-2">Quyền lợi *</label>
+                    <textarea
+                      value={benefits}
+                      onChange={(e) => setBenefits(e.target.value)}
+                      placeholder="Quyền lợi..."
+                      rows={3}
+                      className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none resize-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Skills */}
+                <div className="space-y-4">
+                  <h3 className="text-[#265073] flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-[#2D9596]" />
+                    Kỹ năng yêu cầu
+                  </h3>
+
+                  <div>
+                    <input
+                      type="text"
+                      value={skillInput}
+                      onChange={(e) => setSkillInput(e.target.value)}
+                      onKeyDown={handleSkillInputKeyDown}
+                      placeholder="Nhập kỹ năng và nhấn Enter"
+                      className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                    />
+                    {skills.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {skills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="px-3 py-1 bg-[#9AD0C2] text-[#265073] rounded-full flex items-center gap-2"
+                          >
+                            {skill}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSkill(skill)}
+                              className="hover:text-red-500"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional Info */}
+                <div className="space-y-4">
+                  <h3 className="text-[#265073] flex items-center gap-2">
+                    <Target className="w-5 h-5 text-[#2D9596]" />
+                    Thông tin bổ sung
+                  </h3>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[#265073] mb-2">Số lượng *</label>
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        min="1"
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#265073] mb-2">Hạn nộp *</label>
+                      <input
+                        type="date"
+                        value={deadline}
+                        onChange={(e) => setDeadline(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[#265073] mb-2">Loại HĐ *</label>
+                      <select
+                        value={contractType}
+                        onChange={(e) => setContractType(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-[#9AD0C2] rounded-xl focus:border-[#2D9596] focus:outline-none"
+                      >
+                        <option value="full-time">Full-time</option>
+                        <option value="part-time">Part-time</option>
+                        <option value="freelance">Freelance</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 pt-4 border-t-2 border-[#9AD0C2]">
+                  <button
+                    type="button"
+                    onClick={() => !isSubmitting && setShowCreateModal(false)}
+                    disabled={isSubmitting}
+                    className="flex-1 px-6 py-3 border-2 border-[#2D9596] text-[#2D9596] rounded-xl hover:bg-[#ECF4D6] transition-colors disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 px-6 py-3 bg-[#2D9596] text-white rounded-xl hover:bg-[#265073] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Check className="w-5 h-5" />
+                    {isSubmitting ? "Đang đăng..." : "Đăng tin"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

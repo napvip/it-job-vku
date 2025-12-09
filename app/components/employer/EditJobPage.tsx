@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -19,54 +20,87 @@ import {
   History,
   TrendingUp,
   Eye,
+  ArrowLeft,
+  Target,
 } from "lucide-react";
+import { getJob, updateJob, JobData } from "../../../lib/firebase";
 
 interface EditJobPageProps {
-  jobId: number | null;
-  onNavigateToJobs?: () => void;
-  onNavigateToJobDetail?: (jobId: number) => void;
+  jobId: string;
 }
 
-export function EditJobPage({
-  jobId,
-  onNavigateToJobs,
-  onNavigateToJobDetail,
-}: EditJobPageProps) {
-  // Pre-filled data (mock)
-  const [jobTitle, setJobTitle] = useState("Senior Frontend Developer");
-  const [level, setLevel] = useState("senior");
-  const [workType, setWorkType] = useState<"onsite" | "hybrid" | "remote">(
-    "hybrid"
-  );
-  const [location, setLocation] = useState("Hà Nội");
-  const [salaryMin, setSalaryMin] = useState("25");
-  const [salaryMax, setSalaryMax] = useState("35");
+export function EditJobPage({ jobId }: EditJobPageProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form states
+  const [jobTitle, setJobTitle] = useState("");
+  const [level, setLevel] = useState("middle");
+  const [workType, setWorkType] = useState<"onsite" | "hybrid" | "remote">("onsite");
+  const [location, setLocation] = useState("");
+  const [salaryMin, setSalaryMin] = useState("");
+  const [salaryMax, setSalaryMax] = useState("");
   const [hideSalary, setHideSalary] = useState(false);
-  const [description, setDescription] = useState(
-    "Chúng tôi đang tìm kiếm một Senior Frontend Developer có kinh nghiệm với ReactJS để tham gia vào đội ngũ phát triển sản phẩm của chúng tôi."
-  );
-  const [requirements, setRequirements] = useState(
-    "- 3+ năm kinh nghiệm với ReactJS\n- Thành thạo TypeScript\n- Kinh nghiệm với NextJS là một lợi thế"
-  );
-  const [benefits, setBenefits] = useState(
-    "- Lương cạnh tranh\n- Bảo hiểm đầy đủ\n- Làm việc hybrid"
-  );
-  const [skills, setSkills] = useState([
-    "ReactJS",
-    "TypeScript",
-    "NextJS",
-    "Tailwind CSS",
-  ]);
+  const [description, setDescription] = useState("");
+  const [requirements, setRequirements] = useState("");
+  const [benefits, setBenefits] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
-  const [quantity, setQuantity] = useState("2");
-  const [deadline, setDeadline] = useState("2024-12-31");
+  const [quantity, setQuantity] = useState("1");
+  const [deadline, setDeadline] = useState("");
   const [contractType, setContractType] = useState("full-time");
-  const [gender, setGender] = useState("any");
   const [education, setEducation] = useState("bachelor");
-  const [jobStatus, setJobStatus] = useState("active");
+  const [gender, setGender] = useState("any");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [quickApply, setQuickApply] = useState(true);
   const [customCV, setCustomCV] = useState(false);
+  const [jobStatus, setJobStatus] = useState<"active" | "paused" | "closed" | "draft">("active");
+
+  useEffect(() => {
+    if (jobId) {
+      loadJob();
+    }
+  }, [jobId]);
+
+  const loadJob = async () => {
+    try {
+      setLoading(true);
+      const job = await getJob(jobId);
+      if (!job) {
+        alert("Không tìm thấy tin tuyển dụng!");
+        router.push("/employer/jobs");
+        return;
+      }
+
+      // Populate form
+      setJobTitle(job.title);
+      setLevel(job.level);
+      setWorkType(job.workType);
+      setLocation(job.location);
+      setSalaryMin(job.salaryMin?.toString() || "");
+      setSalaryMax(job.salaryMax?.toString() || "");
+      setHideSalary(job.hideSalary || false);
+      setDescription(job.description);
+      setRequirements(job.requirements);
+      setBenefits(job.benefits);
+      setSkills(job.skills || []);
+      setQuantity(job.quantity.toString());
+      setDeadline(job.deadline);
+      setContractType(job.contractType);
+      setEducation(job.education);
+      setGender(job.gender || "any");
+      setAutoRefresh(job.autoRefresh ?? true);
+      setQuickApply(job.quickApply ?? true);
+      setCustomCV(job.customCV ?? false);
+      setJobStatus(job.status || "active");
+    } catch (error) {
+      console.error("Error loading job:", error);
+      alert("Có lỗi xảy ra!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const suggestedSkills = [
     "Redux",
@@ -75,44 +109,6 @@ export function EditJobPage({
     "Cypress",
     "GraphQL",
     "Webpack",
-  ];
-
-  // Edit history
-  const editHistory = [
-    {
-      date: "12/11/2024",
-      action: "Chỉnh sửa mô tả công việc",
-      time: "14:30",
-    },
-    {
-      date: "10/11/2024",
-      action: "Cập nhật mức lương",
-      time: "09:15",
-    },
-    {
-      date: "08/11/2024",
-      action: "Tạo tin tuyển dụng",
-      time: "16:20",
-    },
-  ];
-
-  // AI suggestions
-  const aiSuggestions = [
-    {
-      icon: TrendingUp,
-      title: "Làm mới tin sau 7 ngày",
-      description: "Tăng 40% lượt xem",
-    },
-    {
-      icon: Sparkles,
-      title: "Tối ưu skill keywords",
-      description: "Cải thiện match score",
-    },
-    {
-      icon: Users,
-      title: "Đăng lên mạng xã hội",
-      description: "Tiếp cận nhiều ứng viên hơn",
-    },
   ];
 
   const handleAddSkill = (skill: string) => {
@@ -135,14 +131,51 @@ export function EditJobPage({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Đã lưu thay đổi!");
-    onNavigateToJobs?.();
+
+    if (!jobTitle || !location || !description || !requirements || !benefits || !deadline) {
+      alert("Vui lòng điền đầy đủ các trường bắt buộc!");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await updateJob(jobId, {
+        title: jobTitle,
+        level,
+        workType,
+        location,
+        salaryMin: salaryMin ? parseFloat(salaryMin) : undefined,
+        salaryMax: salaryMax ? parseFloat(salaryMax) : undefined,
+        hideSalary,
+        description,
+        requirements,
+        benefits,
+        skills,
+        quantity: parseInt(quantity),
+        deadline,
+        contractType,
+        education,
+        gender,
+        autoRefresh,
+        quickApply,
+        customCV,
+        status: jobStatus,
+      });
+      alert("Cập nhật thành công!");
+      router.push(`/employer/jobs/${jobId}`);
+    } catch (error) {
+      console.error("Error updating job:", error);
+      alert("Có lỗi xảy ra!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
-    onNavigateToJobs?.();
+    router.push(`/employer/jobs/${jobId}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -171,35 +204,39 @@ export function EditJobPage({
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#ECF4D6] pt-[72px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#2D9596] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#265073]">Đang tải thông tin...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#ECF4D6] pt-[72px] pb-24">
       {/* Header */}
       <div className="bg-[#ECF4D6] border-b-2 border-[#9AD0C2]">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-5xl mx-auto px-6 py-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between"
           >
-            <div>
-              <h1 className="text-[#265073] text-3xl mb-2">
-                Chỉnh sửa tin tuyển dụng
-              </h1>
-              <p className="text-[#2D9596]">
-                Cập nhật thông tin vị trí mà bạn đang tuyển dụng
-              </p>
-              <div className="flex items-center gap-2 mt-2 text-sm text-[#265073]/70">
-                <Clock className="w-4 h-4" />
-                <span>Lần cập nhật gần nhất: 12:45 – 20/11/2024</span>
-              </div>
-            </div>
             <button
-              onClick={() => onNavigateToJobDetail?.(jobId || 1)}
-              className="px-6 py-3 border-2 border-[#2D9596] text-[#2D9596] rounded-xl hover:bg-[#2D9596] hover:text-white transition-colors flex items-center gap-2"
+              onClick={() => router.push(`/employer/jobs/${jobId}`)}
+              className="flex items-center gap-2 text-[#2D9596] hover:text-[#265073] transition-colors mb-4"
             >
-              <Eye className="w-5 h-5" />
-              Xem tin tuyển dụng
+              <ArrowLeft className="w-5 h-5" />
+              Quay lại
             </button>
+            <h1 className="text-[#265073] text-3xl mb-2">
+              Chỉnh sửa tin tuyển dụng
+            </h1>
+            <p className="text-[#2D9596]">
+              Cập nhật thông tin tin tuyển dụng của bạn
+            </p>
           </motion.div>
         </div>
       </div>
@@ -209,33 +246,6 @@ export function EditJobPage({
           {/* Main Content */}
           <div className="lg:col-span-3">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* AI Optimization Bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-gradient-to-r from-[#2D9596] to-[#265073] rounded-2xl p-6 text-white"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="mb-2">AI Smart Optimization</h3>
-                    <p className="text-white/90 text-sm mb-4">
-                      AI có thể kiểm tra và tối ưu Job Description của bạn để
-                      tăng match score với ứng viên phù hợp!
-                    </p>
-                    <button
-                      type="button"
-                      className="px-6 py-2 bg-white text-[#2D9596] rounded-lg hover:bg-white/90 transition-colors"
-                    >
-                      AI kiểm tra tối ưu JD
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-
               {/* Section 1: Basic Job Info */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -690,73 +700,8 @@ export function EditJobPage({
             </form>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Empty for now */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Edit History Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] shadow-lg"
-            >
-              <h3 className="text-[#265073] mb-4 flex items-center gap-2">
-                <History className="w-5 h-5 text-[#2D9596]" />
-                Lịch sử chỉnh sửa
-              </h3>
-
-              <div className="space-y-3">
-                {editHistory.map((item, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-[#ECF4D6] rounded-lg hover:bg-[#9AD0C2]/30 transition-colors"
-                  >
-                    <div className="text-sm text-[#265073] mb-1">
-                      {item.action}
-                    </div>
-                    <div className="text-xs text-[#265073]/70">
-                      {item.date} • {item.time}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* AI Suggestions Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-2xl p-6 text-white shadow-lg"
-            >
-              <h3 className="mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                Gợi ý AI
-              </h3>
-
-              <div className="space-y-3">
-                {aiSuggestions.map((suggestion, index) => {
-                  const Icon = suggestion.icon;
-                  return (
-                    <div
-                      key={index}
-                      className="p-4 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start gap-3">
-                        <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium mb-1">
-                            {suggestion.title}
-                          </h4>
-                          <p className="text-sm opacity-90">
-                            {suggestion.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
           </div>
         </div>
       </div>
@@ -765,30 +710,26 @@ export function EditJobPage({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
+        transition={{ delay: 0.5 }}
         className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#9AD0C2] shadow-lg py-4 z-50"
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-end gap-4">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-end gap-4">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-8 py-3 text-[#2D9596] hover:text-[#265073] transition-colors"
+            disabled={isSubmitting}
+            className="px-8 py-3 border-2 border-[#2D9596] text-[#2D9596] rounded-xl hover:bg-[#2D9596] hover:text-white transition-colors disabled:opacity-50"
           >
             Hủy
           </button>
           <button
-            type="button"
-            className="px-8 py-3 border-2 border-[#2D9596] text-[#2D9596] rounded-xl hover:bg-[#2D9596] hover:text-white transition-colors"
-          >
-            Lưu nháp
-          </button>
-          <button
             type="submit"
             onClick={handleSubmit}
-            className="px-8 py-3 bg-[#265073] text-white rounded-xl hover:bg-[#2D9596] transition-colors shadow-lg flex items-center gap-2"
+            disabled={isSubmitting}
+            className="px-8 py-3 bg-[#265073] text-white rounded-xl hover:bg-[#2D9596] transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50"
           >
             <Check className="w-5 h-5" />
-            Lưu thay đổi
+            {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
         </div>
       </motion.div>

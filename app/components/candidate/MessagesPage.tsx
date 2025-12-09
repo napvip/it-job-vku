@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Send,
@@ -17,6 +18,18 @@ import {
   FileText,
   Upload,
 } from "lucide-react";
+import {
+  getJob,
+  getCompanyInfo,
+  getOrCreateConversation,
+  sendMessage,
+  getMessages,
+  getConversations,
+  markMessagesAsRead,
+  ConversationData,
+  MessageData,
+  auth,
+} from "../../../lib/firebase";
 
 interface Message {
   id: number;
@@ -31,6 +44,8 @@ interface Message {
 
 interface Conversation {
   id: number;
+  companyId?: string;
+  jobId?: string;
   companyName: string;
   recruiterName: string;
   recruiterTitle: string;
@@ -44,6 +59,7 @@ interface Conversation {
 }
 
 export function MessagesPage() {
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedConversationId, setSelectedConversationId] = useState<
     number | null
@@ -192,6 +208,76 @@ export function MessagesPage() {
       conv.recruiterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       conv.jobTitle.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Auto-open conversation from query params
+  useEffect(() => {
+    const companyId = searchParams.get("companyId");
+    const jobId = searchParams.get("jobId");
+    
+    if (companyId && jobId) {
+      // Try to find existing conversation with this company and job
+      const existingConv = conversations.find(
+        (conv) => conv.companyId === companyId && conv.jobId === jobId
+      );
+      
+      if (existingConv) {
+        setSelectedConversationId(existingConv.id);
+      } else {
+        // Create a new conversation with the company
+        createNewConversation(companyId, jobId);
+      }
+    }
+  }, [searchParams]);
+
+  const createNewConversation = async (companyId: string, jobId: string) => {
+    try {
+      // Load job and company info from Firebase
+      const [jobData, companyData] = await Promise.all([
+        getJob(jobId),
+        getCompanyInfo(companyId)
+      ]);
+
+      if (!jobData || !companyData) {
+        alert("Không thể tải thông tin công ty hoặc công việc!");
+        return;
+      }
+
+      // Create new conversation
+      const newConversation: Conversation = {
+        id: Date.now(),
+        companyId,
+        jobId,
+        companyName: companyData.name,
+        recruiterName: "HR Manager", // Default, should be loaded from company
+        recruiterTitle: "Nhà tuyển dụng",
+        jobTitle: jobData.title,
+        avatar: companyData.name.charAt(0),
+        lastMessage: "Bắt đầu cuộc trò chuyện...",
+        lastMessageTime: "Vừa xong",
+        unreadCount: 0,
+        isOnline: false,
+        messages: [
+          {
+            id: 1,
+            senderId: "candidate",
+            text: `Xin chào! Tôi quan tâm đến vị trí ${jobData.title} tại công ty.`,
+            timestamp: new Date().toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            status: "sent",
+            type: "text",
+          },
+        ],
+      };
+
+      setConversations((prev) => [newConversation, ...prev]);
+      setSelectedConversationId(newConversation.id);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      alert("Có lỗi khi tạo cuộc trò chuyện!");
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();

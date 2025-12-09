@@ -1,858 +1,405 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Briefcase,
-  UserPlus,
-  Eye,
-  TrendingUp,
+  Users,
   Calendar,
   MessageCircle,
   ChevronRight,
   Clock,
-  MapPin,
-  Star,
-  Sparkles,
-  BarChart3,
-  Video,
-  Crown,
-  Zap,
-  Brain,
+  Plus,
   FileText,
-  Target,
 } from "lucide-react";
+import { 
+  auth, 
+  getCompanyJobs, 
+  getEmployerApplications,
+  JobData,
+  JobApplication,
+  UserData
+} from "@/lib/firebase";
+
+type ApplicationWithInfo = JobApplication & { jobInfo?: JobData; candidateInfo?: UserData };
 
 export function EmployerDashboardPage() {
   const router = useRouter();
-  const [timeRange, setTimeRange] = useState<"week" | "month" | "quarter">(
-    "month"
-  );
+  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState<JobData[]>([]);
+  const [applications, setApplications] = useState<ApplicationWithInfo[]>([]);
 
-  // Overview Metrics
-  const metrics = [
-    {
-      id: 1,
-      label: "Tin đang hoạt động",
-      value: "12",
-      icon: Briefcase,
-      color: "#2D9596",
-      change: "+2",
-      trend: "up",
-    },
-    {
-      id: 2,
-      label: "Ứng viên mới tuần này",
-      value: "27",
-      icon: UserPlus,
-      color: "#265073",
-      change: "+8",
-      trend: "up",
-    },
-    {
-      id: 3,
-      label: "Lượt xem (30 ngày)",
-      value: "1,254",
-      icon: Eye,
-      color: "#2D9596",
-      change: "+15%",
-      trend: "up",
-    },
-    {
-      id: 4,
-      label: "Match Score TB",
-      value: "78%",
-      icon: TrendingUp,
-      color: "#265073",
-      change: "+5%",
-      trend: "up",
-    },
-    {
-      id: 5,
-      label: "Lịch phỏng vấn",
-      value: "4",
-      icon: Calendar,
-      color: "#FF9A3C",
-      change: "Tuần này",
-      trend: "neutral",
-    },
-    {
-      id: 6,
-      label: "Tin nhắn chưa đọc",
-      value: "8",
-      icon: MessageCircle,
-      color: "#C9302C",
-      change: "Mới",
-      trend: "neutral",
-    },
-  ];
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        loadData(user.uid);
+      } else {
+        router.push("/login");
+      }
+    });
 
-  // Chart data - Applications over time
-  const chartData = [
-    { day: "T2", applications: 5, views: 120 },
-    { day: "T3", applications: 8, views: 180 },
-    { day: "T4", applications: 6, views: 150 },
-    { day: "T5", applications: 12, views: 220 },
-    { day: "T6", applications: 9, views: 190 },
-    { day: "T7", applications: 4, views: 80 },
-    { day: "CN", applications: 2, views: 45 },
-  ];
+    return () => unsubscribe();
+  }, [router]);
 
-  const maxValue = Math.max(...chartData.map((d) => d.applications));
+  const loadData = async (userId: string) => {
+    try {
+      setLoading(true);
+      
+      // Load jobs
+      const fetchedJobs = await getCompanyJobs(userId);
+      setJobs(fetchedJobs);
 
-  // Active Jobs
-  const activeJobs = [
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      applicants: 24,
-      views: 342,
-      status: "Đang tuyển",
-      matchScore: 82,
-      postedDate: "2 tuần trước",
-    },
-    {
-      id: 2,
-      title: "Backend Developer (NodeJS)",
-      applicants: 18,
-      views: 278,
-      status: "Đang tuyển",
-      matchScore: 75,
-      postedDate: "1 tuần trước",
-    },
-    {
-      id: 3,
-      title: "UI/UX Designer",
-      applicants: 31,
-      views: 412,
-      status: "Đang tuyển",
-      matchScore: 88,
-      postedDate: "3 ngày trước",
-    },
-  ];
-
-  // Recent Applicants
-  const recentApplicants = [
-    {
-      id: 1,
-      name: "Nguyễn Văn An",
-      avatar: "A",
-      position: "Senior Frontend Developer",
-      matchScore: 95,
-      appliedTime: "10 phút trước",
-      experience: "5 năm",
-      skills: ["React", "TypeScript", "NextJS"],
-    },
-    {
-      id: 2,
-      name: "Trần Thị Bình",
-      avatar: "B",
-      position: "UI/UX Designer",
-      matchScore: 88,
-      appliedTime: "1 giờ trước",
-      experience: "3 năm",
-      skills: ["Figma", "Adobe XD", "Sketch"],
-    },
-    {
-      id: 3,
-      name: "Lê Hoàng Cường",
-      avatar: "C",
-      position: "Backend Developer",
-      matchScore: 79,
-      appliedTime: "3 giờ trước",
-      experience: "4 năm",
-      skills: ["NodeJS", "MongoDB", "AWS"],
-    },
-  ];
-
-  // Messages
-  const messages = [
-    {
-      id: 1,
-      candidate: "Nguyễn Văn An",
-      job: "Senior Frontend Developer",
-      message: "Xin chào, tôi muốn biết thêm về quy trình phỏng vấn...",
-      time: "5 phút trước",
-      unread: true,
-    },
-    {
-      id: 2,
-      candidate: "Phạm Minh Đức",
-      job: "Backend Developer",
-      message: "Cảm ơn về lời mời phỏng vấn...",
-      time: "1 giờ trước",
-      unread: true,
-    },
-  ];
-
-  // AI Suggestions
-  const aiSuggestions = [
-    {
-      id: 1,
-      name: "Hoàng Minh Tuấn",
-      avatar: "T",
-      matchScore: 96,
-      position: "Senior Frontend Developer",
-      skills: ["React", "TypeScript", "System Design"],
-      experience: "6 năm",
-      reason:
-        "Kỹ năng vượt trội, kinh nghiệm dự án lớn, phù hợp văn hóa công ty",
-      aiInsight: "Top 1% ứng viên trong lĩnh vực Frontend",
-    },
-    {
-      id: 2,
-      name: "Đỗ Thu Hà",
-      avatar: "H",
-      matchScore: 93,
-      position: "UI/UX Designer",
-      skills: ["Figma", "User Research", "Design System"],
-      experience: "4 năm",
-      reason: "Portfolio xuất sắc, kinh nghiệm B2C, tư duy sản phẩm tốt",
-      aiInsight: "Phong cách thiết kế phù hợp với brand identity",
-    },
-    {
-      id: 3,
-      name: "Bùi Văn Khoa",
-      avatar: "K",
-      matchScore: 89,
-      position: "Backend Developer",
-      skills: ["NodeJS", "Microservices", "Docker"],
-      experience: "5 năm",
-      reason: "Kinh nghiệm scalability, từng làm hệ thống lớn",
-      aiInsight: "Phù hợp với tech stack hiện tại của công ty",
-    },
-  ];
-
-  // Upcoming Interviews
-  const upcomingInterviews = [
-    {
-      id: 1,
-      candidate: "Nguyễn Văn An",
-      position: "Senior Frontend Developer",
-      date: "25/11/2024",
-      time: "14:00",
-      type: "Online",
-      meetLink: "https://meet.google.com/xxx",
-    },
-    {
-      id: 2,
-      candidate: "Trần Thị Bình",
-      position: "UI/UX Designer",
-      date: "26/11/2024",
-      time: "10:00",
-      type: "Trực tiếp",
-      location: "Văn phòng HN",
-    },
-    {
-      id: 3,
-      candidate: "Lê Hoàng Cường",
-      position: "Backend Developer",
-      date: "27/11/2024",
-      time: "15:30",
-      type: "Online",
-      meetLink: "https://zoom.us/xxx",
-    },
-  ];
-
-  // Package info
-  const packageInfo = {
-    plan: "Premium",
-    cvViews: 450,
-    cvViewsLimit: 500,
-    expiryDate: "31/12/2024",
-    features: ["Xem CV không giới hạn", "AI Matching", "Hỗ trợ 24/7"],
+      // Load applications
+      const fetchedApps = await getEmployerApplications(userId);
+      setApplications(fetchedApps);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Calculate stats
+  const stats = {
+    activeJobs: jobs.filter(j => j.status === "active").length,
+    totalJobs: jobs.length,
+    totalApplicants: applications.length,
+    pendingApplicants: applications.filter(a => a.status === "pending").length,
+    interviewApplicants: applications.filter(a => a.status === "interview").length,
+    acceptedApplicants: applications.filter(a => a.status === "accepted").length,
+    rejectedApplicants: applications.filter(a => a.status === "rejected").length,
+  };
+
+  // Recent applications (last 5)
+  const recentApplications = applications.slice(0, 5);
+
+  // Active jobs with applicant count
+  const activeJobsWithApplicants = jobs
+    .filter(j => j.status === "active")
+    .slice(0, 5);
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 60) return `${minutes} phút trước`;
+    if (hours < 24) return `${hours} giờ trước`;
+    return `${days} ngày trước`;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending": return "bg-yellow-100 text-yellow-700";
+      case "reviewing": return "bg-blue-100 text-blue-700";
+      case "interview": return "bg-purple-100 text-purple-700";
+      case "accepted": return "bg-green-100 text-green-700";
+      case "rejected": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pending": return "Chờ xem xét";
+      case "reviewing": return "Đang xem xét";
+      case "interview": return "Phỏng vấn";
+      case "accepted": return "Đã nhận";
+      case "rejected": return "Từ chối";
+      default: return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#ECF4D6] pt-[72px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#2D9596] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-[#265073]">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#ECF4D6] pt-[72px]">
       {/* Header */}
       <div className="bg-[#ECF4D6] border-b-2 border-[#9AD0C2]">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-6 py-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between"
           >
-            <h1 className="text-[#265073] text-3xl mb-2">
-              Dashboard tuyển dụng
-            </h1>
-            <p className="text-[#2D9596]">
-              Tổng quan hiệu quả tin tuyển dụng, ứng viên và hoạt động của công
-              ty
-            </p>
+            <div>
+              <h1 className="text-[#265073] text-2xl font-bold mb-1">
+                Dashboard tuyển dụng
+              </h1>
+              <p className="text-[#2D9596]">
+                Tổng quan hoạt động tuyển dụng của bạn
+              </p>
+            </div>
+            <button
+              onClick={() => router.push("/employer/create-job")}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Đăng tin mới
+            </button>
           </motion.div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Overview Metrics */}
-        <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mb-8">
-          {metrics.map((metric, index) => {
-            const Icon = metric.icon;
-            return (
-              <motion.div
-                key={metric.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ backgroundColor: `${metric.color}20` }}
-                  >
-                    <Icon className="w-6 h-6" style={{ color: metric.color }} />
-                  </div>
-                  {metric.trend !== "neutral" && (
-                    <span className="text-xs px-2 py-1 bg-[#2D9596]/10 text-[#2D9596] rounded-full">
-                      {metric.change}
-                    </span>
-                  )}
-                </div>
-                <div className="text-3xl text-[#265073] mb-1">
-                  {metric.value}
-                </div>
-                <div className="text-[#265073]/70 text-sm">{metric.label}</div>
-              </motion.div>
-            );
-          })}
-        </div>
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl p-5 border-2 border-[#9AD0C2]"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[#2D9596]/20 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-[#2D9596]" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-[#265073]">{stats.activeJobs}</div>
+            <div className="text-sm text-[#265073]/70">Tin đang tuyển</div>
+          </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-8 mb-8">
-          {/* Performance Chart - 2 columns */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl p-5 border-2 border-[#9AD0C2]"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[#265073]/20 flex items-center justify-center">
+                <Users className="w-5 h-5 text-[#265073]" />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-[#265073]">{stats.totalApplicants}</div>
+            <div className="text-sm text-[#265073]/70">Tổng ứng viên</div>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="lg:col-span-2 bg-white rounded-2xl p-8 border-2 border-[#9AD0C2] shadow-lg"
+            className="bg-white rounded-xl p-5 border-2 border-[#9AD0C2]"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-[#265073] text-xl mb-1">
-                  Hiệu suất tuyển dụng
-                </h2>
-                <p className="text-[#265073]/70 text-sm">
-                  Số lượng ứng viên theo thời gian
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {(["week", "month", "quarter"] as const).map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-                      timeRange === range
-                        ? "bg-[#2D9596] text-white"
-                        : "bg-[#ECF4D6] text-[#265073] hover:bg-[#9AD0C2]"
-                    }`}
-                  >
-                    {range === "week"
-                      ? "Tuần"
-                      : range === "month"
-                        ? "Tháng"
-                        : "3 tháng"}
-                  </button>
-                ))}
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-yellow-600" />
               </div>
             </div>
-
-            {/* Chart */}
-            <div className="space-y-4">
-              {chartData.map((data, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="w-12 text-[#265073]/70 text-sm">
-                    {data.day}
-                  </div>
-                  <div className="flex-1 flex items-center gap-3">
-                    {/* Applications bar */}
-                    <div className="flex-1 relative">
-                      <div className="h-8 bg-[#ECF4D6] rounded-lg overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{
-                            width: `${(data.applications / maxValue) * 100}%`,
-                          }}
-                          transition={{ duration: 0.8, delay: index * 0.1 }}
-                          className="h-full bg-gradient-to-r from-[#2D9596] to-[#9AD0C2] flex items-center justify-end pr-3"
-                        >
-                          <span className="text-white text-sm font-bold">
-                            {data.applications}
-                          </span>
-                        </motion.div>
-                      </div>
-                    </div>
-                    {/* Views indicator */}
-                    <div className="w-20 text-right">
-                      <div className="flex items-center gap-1 text-[#265073]/70 text-xs">
-                        <Eye className="w-3 h-3" />
-                        {data.views}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Legend */}
-            <div className="flex items-center gap-6 mt-6 pt-6 border-t-2 border-[#9AD0C2]">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-gradient-to-r from-[#2D9596] to-[#9AD0C2] rounded" />
-                <span className="text-[#265073]/70 text-sm">
-                  Ứng viên nộp hồ sơ
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-[#265073]/70" />
-                <span className="text-[#265073]/70 text-sm">Lượt xem job</span>
-              </div>
-            </div>
+            <div className="text-2xl font-bold text-[#265073]">{stats.pendingApplicants}</div>
+            <div className="text-sm text-[#265073]/70">Chờ xem xét</div>
           </motion.div>
 
-          {/* Package Info - 1 column */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-[#265073] to-[#2D9596] rounded-2xl p-6 text-white shadow-lg"
+            className="bg-white rounded-xl p-5 border-2 border-[#9AD0C2]"
           >
-            <div className="flex items-center gap-2 mb-4">
-              <Crown className="w-6 h-6 text-[#FFD700]" />
-              <h3 className="text-xl">Gói {packageInfo.plan}</h3>
-            </div>
-
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm opacity-90">Lượt xem CV</span>
-                <span className="text-sm">
-                  {packageInfo.cvViews}/{packageInfo.cvViewsLimit}
-                </span>
-              </div>
-              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-white rounded-full"
-                  style={{
-                    width: `${(packageInfo.cvViews / packageInfo.cvViewsLimit) * 100}%`,
-                  }}
-                />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-purple-600" />
               </div>
             </div>
-
-            <div className="space-y-2 mb-6">
-              {packageInfo.features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <Zap className="w-4 h-4 text-[#FFD700]" />
-                  <span className="opacity-90">{feature}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mb-4 p-3 bg-white/10 rounded-lg">
-              <div className="text-xs opacity-75 mb-1">Ngày hết hạn</div>
-              <div className="text-sm">{packageInfo.expiryDate}</div>
-            </div>
-
-            <button className="w-full px-4 py-3 bg-white text-[#265073] rounded-lg hover:bg-[#ECF4D6] transition-colors flex items-center justify-center gap-2">
-              <Crown className="w-4 h-4" />
-              Nâng cấp gói
-            </button>
+            <div className="text-2xl font-bold text-[#265073]">{stats.interviewApplicants}</div>
+            <div className="text-sm text-[#265073]/70">Lịch phỏng vấn</div>
           </motion.div>
         </div>
 
-        {/* Active Jobs & AI Suggestions */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
+        {/* Application Status Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-xl p-5 border-2 border-[#9AD0C2] mb-6"
+        >
+          <h2 className="text-[#265073] font-semibold mb-4">Trạng thái ứng viên</h2>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <span className="text-sm text-[#265073]">Chờ xem xét: {stats.pendingApplicants}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+              <span className="text-sm text-[#265073]">Phỏng vấn: {stats.interviewApplicants}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="text-sm text-[#265073]">Đã nhận: {stats.acceptedApplicants}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <span className="text-sm text-[#265073]">Từ chối: {stats.rejectedApplicants}</span>
+            </div>
+          </div>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Active Jobs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-2xl p-8 border-2 border-[#9AD0C2] shadow-lg"
+            transition={{ delay: 0.5 }}
+            className="bg-white rounded-xl border-2 border-[#9AD0C2]"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[#265073] text-xl">
-                Tin tuyển dụng đang hoạt động
-              </h2>
+            <div className="flex items-center justify-between p-5 border-b border-[#9AD0C2]/30">
+              <h2 className="text-[#265073] font-semibold">Tin tuyển dụng đang hoạt động</h2>
               <button
                 onClick={() => router.push("/employer/jobs")}
-                className="text-[#2D9596] hover:text-[#265073] transition-colors flex items-center gap-1 text-sm"
+                className="text-sm text-[#2D9596] hover:text-[#265073] flex items-center gap-1"
               >
                 Xem tất cả
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-
-            <div className="space-y-4">
-              {activeJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="p-4 bg-[#ECF4D6] rounded-xl hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-[#265073] mb-1">{job.title}</h3>
-                      <p className="text-xs text-[#265073]/70">
-                        {job.postedDate}
-                      </p>
-                    </div>
-                    <span className="px-3 py-1 bg-[#2D9596] text-white text-xs rounded-full">
-                      {job.status}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 mb-3">
-                    <div className="text-center">
-                      <div className="text-xl text-[#2D9596]">
-                        {job.applicants}
-                      </div>
-                      <div className="text-xs text-[#265073]/70">Ứng viên</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl text-[#2D9596]">{job.views}</div>
-                      <div className="text-xs text-[#265073]/70">Lượt xem</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl text-[#2D9596]">
-                        {job.matchScore}%
-                      </div>
-                      <div className="text-xs text-[#265073]/70">Match TB</div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => router.push(`/employer/applicants/${job.id}`)}
-                      className="flex-1 px-4 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors text-sm"
-                    >
-                      Xem ứng viên
-                    </button>
-                    <button className="px-4 py-2 border-2 border-[#9AD0C2] text-[#265073] rounded-lg hover:bg-[#9AD0C2] transition-colors text-sm">
-                      Chi tiết
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* AI Suggestions */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-2xl p-8 text-white shadow-lg"
-          >
-            <div className="flex items-center gap-2 mb-6">
-              <Sparkles className="w-6 h-6" />
-              <h2 className="text-xl">AI gợi ý ứng viên</h2>
-            </div>
-
-            <div className="space-y-4">
-              {aiSuggestions.map((candidate) => (
-                <div
-                  key={candidate.id}
-                  className="p-4 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20 transition-colors"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 bg-white text-[#2D9596] rounded-full flex items-center justify-center text-xl flex-shrink-0">
-                      {candidate.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-medium">{candidate.name}</h3>
-                        <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
-                          <Star className="w-3 h-3 text-[#FFD700]" />
-                          <span className="text-xs">{candidate.matchScore}%</span>
-                        </div>
-                      </div>
-                      <p className="text-sm opacity-90 mb-2">
-                        {candidate.position}
-                      </p>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {candidate.skills.map((skill) => (
-                          <span
-                            key={skill}
-                            className="px-2 py-0.5 bg-white/20 rounded text-xs"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-white/10 rounded-lg mb-2">
-                    <p className="text-xs opacity-90">{candidate.reason}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs opacity-75 mb-3">
-                    <Sparkles className="w-3 h-3" />
-                    <span className="italic">{candidate.aiInsight}</span>
-                  </div>
-
-                  <button className="w-full px-4 py-2 bg-white text-[#2D9596] rounded-lg hover:bg-[#ECF4D6] transition-colors text-sm">
-                    Xem chi tiết hồ sơ
+            <div className="p-5">
+              {activeJobsWithApplicants.length === 0 ? (
+                <div className="text-center py-8">
+                  <Briefcase className="w-12 h-12 text-[#9AD0C2] mx-auto mb-3" />
+                  <p className="text-[#265073]/70 mb-4">Bạn chưa có tin tuyển dụng nào</p>
+                  <button
+                    onClick={() => router.push("/employer/create-job")}
+                    className="text-[#2D9596] hover:text-[#265073] text-sm font-medium"
+                  >
+                    Đăng tin ngay →
                   </button>
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-4">
+                  {activeJobsWithApplicants.map((job) => (
+                    <div
+                      key={job.id}
+                      onClick={() => router.push(`/employer/applicant/${job.id}`)}
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-[#ECF4D6] cursor-pointer transition-colors"
+                    >
+                      <div className="flex-1">
+                        <h3 className="text-[#265073] font-medium text-sm">{job.title}</h3>
+                        <div className="flex items-center gap-3 text-xs text-[#265073]/60 mt-1">
+                          <span>{job.location}</span>
+                          <span>•</span>
+                          <span>Đăng: {formatDate(job.createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-[#2D9596]">{job.applicants || 0}</div>
+                        <div className="text-xs text-[#265073]/60">ứng viên</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
-        </div>
 
-        {/* Recent Applicants, Messages & Interviews */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-8">
-          {/* Recent Applicants */}
+          {/* Recent Applications */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] shadow-lg"
+            className="bg-white rounded-xl border-2 border-[#9AD0C2]"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[#265073] text-lg">Ứng viên mới nhất</h2>
+            <div className="flex items-center justify-between p-5 border-b border-[#9AD0C2]/30">
+              <h2 className="text-[#265073] font-semibold">Ứng viên mới nhất</h2>
               <button
                 onClick={() => router.push("/employer/applicants")}
-                className="text-[#2D9596] hover:text-[#265073] transition-colors"
+                className="text-sm text-[#2D9596] hover:text-[#265073] flex items-center gap-1"
               >
-                <ChevronRight className="w-5 h-5" />
+                Xem tất cả
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-
-            <div className="space-y-4">
-              {recentApplicants.map((applicant) => (
-                <div
-                  key={applicant.id}
-                  className="p-4 bg-[#ECF4D6] rounded-xl hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#2D9596] to-[#9AD0C2] rounded-full flex items-center justify-center text-white flex-shrink-0">
-                      {applicant.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[#265073] truncate">
-                        {applicant.name}
-                      </h3>
-                      <p className="text-xs text-[#265073]/70">
-                        {applicant.experience} kinh nghiệm
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-[#2D9596]">
-                        {applicant.matchScore}%
-                      </div>
-                      <div className="text-xs text-[#265073]/70">Match</div>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-[#265073]/70 mb-2">
-                    {applicant.position}
-                  </p>
-
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {applicant.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="px-2 py-0.5 bg-white text-[#265073] rounded text-xs"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-[#265073]/70 mb-3">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {applicant.appliedTime}
-                    </div>
-                  </div>
-
-                  <button className="w-full px-3 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors text-sm">
-                    Xem hồ sơ
-                  </button>
+            <div className="p-5">
+              {recentApplications.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-[#9AD0C2] mx-auto mb-3" />
+                  <p className="text-[#265073]/70">Chưa có ứng viên nào</p>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Messages */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] shadow-lg"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[#265073] text-lg">Tin nhắn mới</h2>
-              <button
-                onClick={() => router.push("/employer/messages")}
-                className="text-[#2D9596] hover:text-[#265073] transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className="p-4 bg-[#ECF4D6] rounded-xl hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => router.push("/employer/messages")}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-[#265073]">{msg.candidate}</h3>
-                    {msg.unread && (
-                      <span className="px-2 py-0.5 bg-[#C9302C] text-white text-xs rounded-full">
-                        Mới
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-[#265073]/70 mb-2">{msg.job}</p>
-                  <p className="text-sm text-[#265073] mb-2 line-clamp-2">
-                    {msg.message}
-                  </p>
-                  <div className="flex items-center gap-1 text-xs text-[#265073]/70">
-                    <Clock className="w-3 h-3" />
-                    {msg.time}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => router.push("/employer/messages")}
-              className="w-full px-4 py-3 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors flex items-center justify-center gap-2"
-            >
-              <MessageCircle className="w-4 h-4" />
-              Mở hộp thư
-            </button>
-          </motion.div>
-
-          {/* Upcoming Interviews */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] shadow-lg"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-[#265073] text-lg">Lịch phỏng vấn</h2>
-              <button
-                onClick={() => router.push("/employer/interviews")}
-                className="text-[#2D9596] hover:text-[#265073] transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {upcomingInterviews.map((interview) => (
-                <div
-                  key={interview.id}
-                  className="p-4 bg-[#ECF4D6] rounded-xl hover:shadow-md transition-shadow"
-                >
-                  <h3 className="text-[#265073] mb-1">
-                    {interview.candidate}
-                  </h3>
-                  <p className="text-xs text-[#265073]/70 mb-3">
-                    {interview.position}
-                  </p>
-
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center gap-2 text-sm text-[#265073]">
-                      <Calendar className="w-4 h-4 text-[#2D9596]" />
-                      {interview.date} - {interview.time}
+              ) : (
+                <div className="space-y-4">
+                  {recentApplications.map((app) => (
+                    <div
+                      key={app.id}
+                      onClick={() => router.push(`/employer/applicant/${app.jobId}`)}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#ECF4D6] cursor-pointer transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2D9596] to-[#265073] flex items-center justify-center text-white font-medium text-sm shrink-0">
+                        {app.candidateName?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[#265073] font-medium text-sm truncate">{app.candidateName}</h3>
+                        <p className="text-xs text-[#265073]/60 truncate">
+                          {app.jobInfo?.title || "Vị trí không xác định"}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(app.status)}`}>
+                          {getStatusText(app.status)}
+                        </span>
+                        <p className="text-xs text-[#265073]/50 mt-1">{formatTimeAgo(app.appliedAt)}</p>
+                      </div>
                     </div>
-                    {interview.type === "Online" ? (
-                      <div className="flex items-center gap-2 text-sm text-[#265073]">
-                        <Video className="w-4 h-4 text-[#2D9596]" />
-                        {interview.type}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-[#265073]">
-                        <MapPin className="w-4 h-4 text-[#2D9596]" />
-                        {interview.location}
-                      </div>
-                    )}
-                  </div>
-
-                  {interview.type === "Online" && (
-                    <button className="w-full px-3 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors text-sm flex items-center justify-center gap-2">
-                      <Video className="w-4 h-4" />
-                      Tham gia
-                    </button>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-
-            <button
-              onClick={() => router.push("/employer/interviews")}
-              className="w-full mt-4 px-4 py-2 border-2 border-[#9AD0C2] text-[#265073] rounded-lg hover:bg-[#9AD0C2] transition-colors text-sm"
-            >
-              Xem tất cả lịch
-            </button>
           </motion.div>
         </div>
 
-        {/* AI Tools Section */}
+        {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="mb-8"
+          transition={{ delay: 0.7 }}
+          className="mt-6 bg-white rounded-xl p-5 border-2 border-[#9AD0C2]"
         >
-          <h2 className="text-[#265073] text-xl mb-6 flex items-center gap-2">
-            <Brain className="w-6 h-6" />
-            AI Tools & Tối ưu tuyển dụng
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* JD Analyzer */}
-            <div
-              onClick={() => router.push("/employer/jd-analyzer")}
-              className="bg-gradient-to-br from-[#2D9596] to-[#265073] rounded-2xl p-6 text-white cursor-pointer hover:shadow-2xl transition-shadow group"
+          <h2 className="text-[#265073] font-semibold mb-4">Thao tác nhanh</h2>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => router.push("/employer/create-job")}
+              className="flex items-center gap-2 px-4 py-2 bg-[#2D9596] text-white rounded-lg hover:bg-[#265073] transition-colors text-sm"
             >
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Brain className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">JD Analyzer</h3>
-              <p className="text-sm opacity-90 mb-4">
-                AI phân tích và tối ưu mô tả công việc, gợi ý kỹ năng và mức lương phù hợp
-              </p>
-              <div className="flex items-center gap-2 text-sm">
-                <Sparkles className="w-4 h-4" />
-                <span>Powered by AI</span>
-              </div>
-            </div>
-
-            {/* AI Candidate Matching */}
-            <div className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] hover:border-[#2D9596] transition-colors cursor-pointer group">
-              <div className="w-12 h-12 bg-[#ECF4D6] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#9AD0C2] transition-colors">
-                <Zap className="w-6 h-6 text-[#2D9596]" />
-              </div>
-              <h3 className="text-[#265073] text-lg font-medium mb-2">AI Matching</h3>
-              <p className="text-[#2D9596] text-sm mb-4">
-                Tìm kiếm ứng viên phù hợp tự động với độ chính xác cao
-              </p>
-              <div className="flex items-center gap-2 text-sm text-[#2D9596]">
-                <Target className="w-4 h-4" />
-                <span>95% accuracy</span>
-              </div>
-            </div>
-
-            {/* Smart Reports */}
-            <div className="bg-white rounded-2xl p-6 border-2 border-[#9AD0C2] hover:border-[#2D9596] transition-colors cursor-pointer group">
-              <div className="w-12 h-12 bg-[#ECF4D6] rounded-xl flex items-center justify-center mb-4 group-hover:bg-[#9AD0C2] transition-colors">
-                <BarChart3 className="w-6 h-6 text-[#2D9596]" />
-              </div>
-              <h3 className="text-[#265073] text-lg font-medium mb-2">Smart Reports</h3>
-              <p className="text-[#2D9596] text-sm mb-4">
-                Báo cáo chi tiết về hiệu quả tuyển dụng và insights
-              </p>
-              <div className="flex items-center gap-2 text-sm text-[#2D9596]">
-                <TrendingUp className="w-4 h-4" />
-                <span>Coming soon</span>
-              </div>
-            </div>
+              <Plus className="w-4 h-4" />
+              Đăng tin mới
+            </button>
+            <button
+              onClick={() => router.push("/employer/jobs")}
+              className="flex items-center gap-2 px-4 py-2 border-2 border-[#2D9596] text-[#2D9596] rounded-lg hover:bg-[#2D9596] hover:text-white transition-colors text-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Quản lý tin
+            </button>
+            <button
+              onClick={() => router.push("/employer/applicants")}
+              className="flex items-center gap-2 px-4 py-2 border-2 border-[#265073] text-[#265073] rounded-lg hover:bg-[#265073] hover:text-white transition-colors text-sm"
+            >
+              <Users className="w-4 h-4" />
+              Xem ứng viên
+            </button>
+            <button
+              onClick={() => router.push("/employer/messages")}
+              className="flex items-center gap-2 px-4 py-2 border-2 border-[#9AD0C2] text-[#265073] rounded-lg hover:bg-[#9AD0C2] transition-colors text-sm"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Tin nhắn
+            </button>
           </div>
         </motion.div>
       </div>

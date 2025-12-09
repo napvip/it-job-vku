@@ -7,7 +7,7 @@ import { CompanyDetailPage as CompanyDetailComponent } from "../../components/co
 
 export default function CompanyDetail() {
   const params = useParams();
-  const companyId = params.id ? parseInt(params.id as string) : null;
+  const companyId = params.id as string;
 
   return (
     <>
